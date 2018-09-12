@@ -1,326 +1,344 @@
 
 # coding: utf-8
 
-# # Assignment 1: Uninformed Search
+# # Assignment 2: Iterative-Deepening Search
 
 # Ben Newell
 
 # ## Overview
 
-# Breadth-first and depth-first are two algorithms for performing
-# uninformed search---a search that does not use
-# knowledge about the goal of the search.  You will implement both
-# search algorithms in python and test them on a simple graph.
+# Implement the iterative-deepening search algorithm as discussed in our Week 2 lecture notes and as shown in figures 3.17 and 3.18 in our text book. Apply it to the 8-puzzle and a second puzzle of your choice. 
 
 # ## Required Code
 
-# In this jupyter notebook, you must implement at least the following functions:
+# In this jupyter notebook, implement the following functions:
 # 
-#   * `breadthFirstSearch(startState, goalState, successorsf)` 
-#   * `depthFirstSearch(startState, goalState, successorsf)`
+#   * `iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDepth)`
+#   * `depthLimitedSearch(startState, goalState, actionsF, takeActionF, depthLimit)`
 #   
-# Each receives as arguments the starting state, the goal state, and a successors function.  `breadthFirstSearch` returns the breadth-first solution path as a list of states starting with the `startState` and ending with the `goalState`.  `depthFirstSearch` returns the depth-first solution path.
+# `depthLimitedSearch` is called by `iterativeDeepeningSearch` with `depthLimit`s of $0, 1, \ldots, $ `maxDepth`. Both must return either the solution path as a list of states, or the strings `cutoff` or `failure`.  `failure` signifies that all states were searched and the goal was not found. 
 # 
-# <font color="red">You must</font> implement the search algorithm as specified in [03 Problem-Solving Agents](http://nbviewer.jupyter.org/url/www.cs.colostate.edu/~anderson/cs440/notebooks/03 Problem-Solving Agents.ipynb) lecture notes.
-
-# If you prefer to develop your python code in a separate editor or IDE, you may do so.  If it is stored in a file called `A1mysolution.py`, you can use it here by executing the following cell.
+# Each receives the arguments
 # 
-# When your solution works, <font color="red">remember</font> to remove or comment out the following import statement and instead, paste in all of your function definintions into this notebook.
+#   * the starting state, 
+#   * the goal state,
+#   * a function `actionsF` that is given a state and returns a list of valid actions from that state,
+#   * a function `takeActionF` that is given a state and an action and returns the new state that results from applying the action to the state,
+#   * either a `depthLimit` for `depthLimitedSearch`, or `maxDepth` for `iterativeDeepeningSearch`.
 
-# # Explanation
-# Here is my python implimentation based off of the method specified in [03 Problem-Solving Agents](http://nbviewer.jupyter.org/url/www.cs.colostate.edu/~anderson/cs440/notebooks/03 Problem-Solving Agents.ipynb).
-# It starts simply by taking the inputs required by the search functions as well as a boolean to tell the difference between breadth and depth first search. Then it initializes variables `expanded` and `unexpanded` which will be used to keep track of what states to look for. Afterwards is a quick check to see if we are done.
-# Then it continues to follow the algorithm...
+# Use your solution to solve the 8-puzzle.
+# Implement the state of the puzzle as a list of integers. 0 represents the empty position. 
 # 
+# Required functions for the 8-puzzle are the following.
 # 
-# Tricky lines
-# * list comprehension to set children. In plain english it adds i to children if it is not in expanded or unExpanded
-# * The additions at the end. If breadthFirst, we want to add the children to the beginning of the list because we pop off the back
-# * In depthFirst, we add to the end so that the lastest child is expanded in the next call to general search.
+#   * `findBlank_8p(state)`: return the row and column index for the location of the blank (the 0 value).
+#   * `actionsF_8p(state)`: returns a list of up to four valid actions that can be applied in `state`. Return them in the order `left`, `right`, `up`, `down`, though only if each one is a valid action.
+#   * `takeActionF_8p(state, action)`: return the state that results from applying `action` in `state`.
+#   * `printPath_8p(startState, goalState, path)`: print a solution path in a readable form.  You choose the format.
 
-# In[51]:
+# <font color='red'>Also</font>, implement a second search problem of your choice.  Apply your `iterativeDeepeningSearch` function to it.
 
+# Insert your function definitions in this notebook.
 
-def generalSearch(startState, goalState, successorsf, breadthFirst):
-    expanded = {}
-    unExpanded = [(startState, None)]
-    if startState == goalState:
-        return startState
-    while unExpanded:
-        state, parent = unExpanded.pop()
-        children = successorsf(state)
-        expanded[state] = parent
-        #print(expanded)
-        children = [i for i in children if i not in expanded and i not in [c for (c,_) in unExpanded]]
-        if goalState in children:
-            solution = [state, goalState]
-            while parent:
-                solution.insert(0,parent)
-                parent = expanded[parent]
-            return solution
-        children.sort(reverse = True)
-        children = [(i, state) for i in children]
-        #print(children)
-        if breadthFirst:
-            unExpanded = children + unExpanded
-        else:
-            unExpanded += children
-    return "Goal not found"
+# Here are some example results.
 
+# ## Funcitons
 
-# In[52]:
+# In[184]:
 
 
-def breadthFirstSearch(startState, goalState, successorsf):
-    return generalSearch(startState, goalState, successorsf, True)
+def findBlank_8p(state):
+    # find index of 0
+    index = state.index(0)
+    #return modulo and python op // for row and column
+    return index // 3, index % 3
 
 
-# In[53]:
+# In[185]:
 
 
-def depthFirstSearch(startState, goalState, successorsf):
-    return generalSearch(startState, goalState, successorsf, False)
+def printState_8p(state):
+    state = state.copy()
+    state[state.index(0)] = "-"
+    #make each line as its own list
+    l1,l2,l3 = state[:3], state[3:6], state[6:]
+    #print theses lists seperated by a new line
+    print(*[l1,l2,l3], sep = "\n")
+    return
 
 
-# # Example
+# In[186]:
 
-# Here is a simple example.  States are defined by lower case letters.  A dictionary stores a list of successor states for each state in the graph that has successors.
 
-# In[54]:
+def actionsF_8p(state):
+    i = state.index(0)
+    if i % 3 > 0:
+        yield "left"
+    if i % 3 < 2:
+        yield "right"
+    if i // 3 > 0:
+        yield "up"
+    if i // 3 < 2:
+        yield "down"
 
 
-successors = {'a':  ['b', 'c', 'd'],
-              'b':  ['e', 'f', 'g'],
-              'c':  ['a', 'h', 'i'],
-              'd':  ['j', 'z'],
-              'e':  ['k', 'l'],
-              'g':  ['m'],
-              'k':  ['z']}
-successors
+# In[187]:
 
 
-# In[55]:
+def takeActionF_8p(state, action):
+    #this does not check if action is allowed
+    state = state.copy()
+    i = state.index(0)
+    if action == "right":
+        state[i], state[i+1] = state[i+1], state[i]
+    elif action == "left":
+        state[i], state[i-1] = state[i-1], state[i]
+    elif action == "up":
+        state[i], state[i-3] = state[i-3], state[i]
+    elif action == "down":
+        state[i], state[i+3] = state[i+3], state[i]
+    return state
 
 
-import copy
+# In[188]:
 
-def successorsf(state):
-    return copy.copy(successors.get(state, []))
 
+def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit):
+    if state == goalState:
+        return []
+    if depthLimit == 0:
+        return "cutoff"
+    cutoffoccurred = False
+    for action in actionsF(state):
+        childState = takeActionF(state, action)
+        result = depthLimitedSearch(childState, goalState, actionsF, takeActionF, depthLimit - 1)
+        if result == "cutoff":
+            cutoffoccurred = True
+        elif result != "failure":
+            result.insert(0, childState)
+            return result
+    if cutoffoccurred:
+        return "cutoff"
+    else:
+        return "failure"
 
-# In[56]:
 
+# In[189]:
 
-successorsf('e')
 
+def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDepth):
+    for depth in range(0, maxDepth):
+        result = depthLimitedSearch(startState, goalState, actionsF, takeActionF, depth)
+        if result == "failure":
+            return "failure"
+        if result != "cutoff":
+            result.insert(0, startState)
+            return result
+    return "cutoff"
 
-# In[57]:
 
+# In[190]:
 
-print('Breadth-first')
-print('path from a to a is', breadthFirstSearch('a', 'a', successorsf))
-print('path from a to m is', breadthFirstSearch('a', 'm', successorsf))
-print('path from a to z is', breadthFirstSearch('a', 'z', successorsf))
 
+def printPath_8p(startState, goalState, path):
+    pass
 
-# In[58]:
 
+# In[191]:
 
-print('Depth-first')
-print('path from a to a is', depthFirstSearch('a', 'a', successorsf))
-print('path from a to m is', depthFirstSearch('a', 'm', successorsf))
-print('path from a to z is', depthFirstSearch('a', 'z', successorsf))
 
+startState = [1, 0, 3, 4, 2, 5, 6, 7, 8]
 
-# Let's try a navigation problem around a grid of size 10 x 10.
 
-# In[59]:
+# In[192]:
 
 
-def gridSuccessors(state):
-    row, col = state
-    # succs will be list of tuples () rather than list of lists [] because state must
-    # be an immutable type to serve as a key in dictionary of expanded nodes
-    succs = []
-    for r in [-1, 0, 1]:
-        for c in [-1, 0, 1]:
-            newr = row + r
-            newc = col + c
-            if 0 <= newr <= 9 and 0 <= newc <= 9:  # cool, huh?
-                succs.append( (newr, newc) )
-    return succs
+printState_8p(startState)  # not a required function for this assignment, but it helps when implementing printPath_8p
 
 
-# In[60]:
+# In[193]:
 
 
-gridSuccessors([3,4])
+assert(findBlank_8p(startState) == (0,1))
+assert(findBlank_8p([1,2,3,0,5,6,7,8,4]) == (1,0))
+assert(findBlank_8p([1,2,3,8,5,6,7,4,0]) == (2,2))
+assert(findBlank_8p([1,2,3,8,0,6,7,4,5]) == (1,1))
+print("All tests passed for findBlank_8p")
 
 
-# In[61]:
+# In[194]:
 
 
-gridSuccessors([3,9])
+for action in actionsF_8p(startState):
+    print(action)
 
 
-# In[62]:
+# In[195]:
 
 
-gridSuccessors([0,0])
+actionList = list(actionsF_8p(startState))
+assert(actionList == ['left', 'right', 'down'])
+bottomRight, bottomLeft = [1,2,3,8,5,6,7,4,0], [1,2,3,8,5,6,0,4,7]
+topRight, topLeft = [1,2,0,8,5,6,7,4,1],[0,2,3,8,5,6,7,4,1]
+center = [1,2,3,4,0,5,6,7,8]
+actionList = list(actionsF_8p(bottomRight))
+assert(actionList == ['left', 'up'])
+actionList = list(actionsF_8p(bottomLeft))
+assert(actionList == ['right', 'up'])
+actionList = list(actionsF_8p(topRight))
+assert(actionList == ['left', 'down'])
+actionList = list(actionsF_8p(topLeft))
+assert(actionList == ['right', 'down'])
+actionList = list(actionsF_8p(center))
+assert(actionList == ['left', 'right', 'up', 'down'])
 
 
-# In[63]:
+# In[196]:
 
 
-print('Breadth-first')
-print('path from (0, 0) to (9, 9) is', breadthFirstSearch((0, 0), (9, 9), gridSuccessors))
+takeActionF_8p(startState, 'down')
 
 
-# In[64]:
+# In[197]:
 
 
-print('Depth-first')
-print('path from (0, 0) to (9, 9) is', depthFirstSearch((0, 0), (9, 9), gridSuccessors))
+printState_8p(startState)
+print("Moves down to")
+printState_8p(takeActionF_8p(startState, 'down'))
 
 
-# Oooo, what kind of path is that?  Let's plot it.
+# In[198]:
 
-# In[65]:
 
+goalState = takeActionF_8p(startState, 'down')
 
-import matplotlib.pyplot as plt
-get_ipython().run_line_magic('matplotlib', 'inline')
 
+# In[199]:
 
-# In[66]:
 
+newState = takeActionF_8p(startState, 'down')
 
-path = depthFirstSearch((0, 0), (9, 9), gridSuccessors)
+
+# In[200]:
+
+
+newState == goalState
+
+
+# In[201]:
+
+
+startState
+
+
+# In[202]:
+
+
+path = depthLimitedSearch(startState, goalState, actionsF_8p, takeActionF_8p, 3)
 path
 
 
-# In[67]:
+# Notice that `depthLimitedSearch` result is missing the start state.  This is inserted by `iterativeDeepeningSearch`.
+# 
+# But, when we try `iterativeDeepeningSearch` to do the same search, it finds a shorter path!
+
+# In[203]:
 
 
-rows = [location[0] for location in path]
-cols = [location[1] for location in path]
-plt.plot(rows,cols,'o-');
-
-
-# In[68]:
-
-
-path = breadthFirstSearch((0, 0), (9, 9), gridSuccessors)
+path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 3)
 path
 
 
-# In[69]:
+# Also notice that the successor states are lists, not tuples.  This is okay, because the search functions for this assignment do not
+
+# In[204]:
 
 
-rows = [location[0] for location in path]
-cols = [location[1] for location in path]
-plt.plot(rows,cols,'o-');
+startState = [4, 7, 2, 1, 6, 5, 0, 3, 8]
+path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 3)
+path
 
 
-# In[70]:
+# In[205]:
 
 
-depthFirstSearch((0, 0), (9, 20), gridSuccessors)
+startState = [4, 7, 2, 1, 6, 5, 0, 3, 8]
+path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 5)
+path
 
 
-# # Extra Credit
+# Humm...maybe we can't reach the goal state from this state.  We need a way to randomly generate a valid start state.
+
+# In[206]:
+
+
+import random
+
+
+# In[207]:
+
+
+random.choice(['left', 'right'])
+
+
+# In[208]:
+
+
+def randomStartState(goalState, actionsF, takeActionF, nSteps):
+    state = goalState
+    for i in range(nSteps):
+        l = list(actionsF(state))
+        state = takeActionF(state, random.choice(l))
+    return state
+
+
+# In[209]:
+
+
+goalState = [1, 2, 3, 4, 0, 5, 6, 7, 8]
+randomStartState(goalState, actionsF_8p, takeActionF_8p, 10)
+
+
+# In[210]:
+
+
+startState = randomStartState(goalState, actionsF_8p, takeActionF_8p, 50)
+startState
+
+
+# In[ ]:
+
+
+path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 20)
+path
+
+
+# Let's print out the state sequence in a readable form.
+
+# In[ ]:
+
+
+for p in path:
+    printState_8p(p)
+    print()
+
+
+# Here is one way to format the search problem and solution in a readable form.
+
+# In[ ]:
+
+
+printPath_8p(startState, goalState, path)
+
+
+# Download [A2grader.tar](A2grader.tar) and extract A2grader.py from it.
+
+# In[ ]:
+
+
+get_ipython().run_line_magic('run', '-i A2grader.py')
+
+
+# ## Extra Credit
 # 
-# For extra credit, use your functions to solve the Camels Puzzle, described at [Logic Puzzles](http://www.folj.com/puzzles/).
-# The following code illustrates one possible state representation and shows results of a breadth-first and a dept-first search.  You must define a new successors function, called `camelSuccessorsf`. 
-
-# In[108]:
-
-
-def camelSuccessorsf(camelState):
-    successors = []
-    index = camelState.index(' ')
-    if index - 1 >= 0 and camelState[index - 1] == 'R':
-        moveLeft = list(camelState)
-        moveLeft[index - 1], moveLeft[index] = moveLeft[index], moveLeft[index - 1]
-        successors.append(tuple(moveLeft))
-    if index + 2 < len(camelState) and camelState[index + 1] == 'R' and camelState[index + 2] == 'L':
-        stepLeft = list(camelState)
-        stepLeft[index], stepLeft[index + 2] = stepLeft[index + 2], stepLeft[index]
-        successors.append(tuple(stepLeft))
-    if index + 1 < len(camelState) and camelState[index + 1] == 'L':
-        moveRight = list(camelState)
-        moveRight[index + 1], moveRight[index] = moveRight[index], moveRight[index + 1]
-        successors.append(tuple(moveRight))
-    if index - 2 > 0 and camelState[index - 1] == "L" and camelState[index - 2] == 'R':
-        stepRight = list(camelState)
-        stepRight[index], stepRight[index - 2] = stepRight[index -2], stepRight[index]
-        successors.append(tuple(stepRight))
-    return successors
-
-
-# In[114]:
-
-
-camelStartState = ('R','R','R','R', ' ', 'L', 'L', 'L','L')
-
-
-# In[115]:
-
-
-camelGoalState=('L','L','L','L', ' ', 'R', 'R', 'R', 'R')
-
-
-# In[116]:
-
-
-camelSuccessorsf(camelStartState)
-
-
-# In[117]:
-
-
-children = camelSuccessorsf(camelStartState)
-print(children)
-grandChildren = camelSuccessorsf(children[0])
-print(grandChildren)
-camelSuccessorsf(grandChildren[0])
-
-
-# In[118]:
-
-
-bfs = breadthFirstSearch(camelStartState, camelGoalState, camelSuccessorsf)
-print('Breadth-first solution: (', len(bfs), 'steps)')
-for s in bfs:
-    print(s)
-
-dfs = depthFirstSearch(camelStartState, camelGoalState, camelSuccessorsf)
-print('Depth-first solution: (', len(dfs), 'steps)')
-for s in dfs:
-    print(s)
-
-
-# ## Grading
-# 
-# Your notebook will be run and graded automatically. Download [A1grader.tar](http://www.cs.colostate.edu/~anderson/cs440/notebooks/A1grader.tar) <font color="red">(COMING SOON)</font> and extract A1grader.py from it. Run the code in the following cell to demonstrate an example grading session. You should see a perfect score of 80/100 if your functions are defined correctly. 
-# 
-# The remaining 20% will be based on your writing.  In markdown cells, explain what your functions are doing and summarize the algorithms.
-# 
-# Add at least one markdown cell that describes problems you encountered in trying to solve this assignment.
-
-# ## Check-in
-
-# Do not include this section in your notebook.
-# 
-# Name your notebook ```Lastname-A1.ipynb```.  So, for me it would be ```Anderson-A1.ipynb```.  Submit the file using the ```Assignment 1``` link on [Canvas](https://colostate.instructure.com/courses/55296).
-# 
-# Grading will be based on 
-# 
-#   * correct behavior of the required functions, and
-#   * readability of the notebook.
-
-# In[27]:
-
-
-get_ipython().run_line_magic('run', '-i A1grader.py')
-
+# For extra credit, apply your solution to the grid example in Assignment 1 with the addition of a horizontal and vertical barrier at least three positions long.  Demonstrate the solutions found in four different pairs of start and goal states.

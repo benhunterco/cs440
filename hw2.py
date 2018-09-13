@@ -70,6 +70,32 @@ def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDe
 
 
 import random
+
+def actionsF_maze(state):
+    i = state.index("O")
+    if i % 10 > 0 and state[i-1] != "x":
+        yield "left"
+    if i % 10 < 9 and state[i+1] != "x":
+        yield "right"
+    if i // 10 > 0 and state[i-10] != "x":
+        yield "up"
+    if i // 10 < 9 and state[i+10] != "x":
+        yield "down"
+
+def takeActionF_maze(state, action):
+    #this does not check if action is allowed
+    state = state.copy()
+    i = state.index("O")
+    if action == "right":
+        state[i], state[i+1] = state[i+1], state[i]
+    elif action == "left":
+        state[i], state[i-1] = state[i-1], state[i]
+    elif action == "up":
+        state[i], state[i-10] = state[i-10], state[i]
+    elif action == "down":
+        state[i], state[i+10] = state[i+10], state[i]
+    return state
+
 def printMaze_10(state):
     for i in range(0,10):
         print(*state[i*10:(i+1)*10], sep = " ")
@@ -77,10 +103,6 @@ def printMaze_10(state):
 def regenerateMaze(state):
     state = [random.sample(['x','-','-'],1)[0] for _ in range(0,100)] 
 
-def takeMazeAction:
-    pass
-def mazeActions:
-    pass
 def printMazePath(result):
     path = result[0].copy()
     for i in result:

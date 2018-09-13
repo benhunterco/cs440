@@ -102,12 +102,13 @@ def printMaze_10(state):
 
 def regenerateMaze(state):
     state = [random.sample(['x','-','-'],1)[0] for _ in range(0,100)] 
+    return state
 
 def printMazePath(result):
     path = result[0].copy()
     for i in result:
         path[i.index("O")] = "~"
-    print(path)
+    printMaze_10(path)
 
     
 #create a random start state, not guaranteed to be solvable

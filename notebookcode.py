@@ -44,7 +44,7 @@
 
 # ## Funcitons
 
-# In[184]:
+# In[17]:
 
 
 def findBlank_8p(state):
@@ -54,7 +54,7 @@ def findBlank_8p(state):
     return index // 3, index % 3
 
 
-# In[185]:
+# In[18]:
 
 
 def printState_8p(state):
@@ -67,7 +67,7 @@ def printState_8p(state):
     return
 
 
-# In[186]:
+# In[19]:
 
 
 def actionsF_8p(state):
@@ -82,7 +82,7 @@ def actionsF_8p(state):
         yield "down"
 
 
-# In[187]:
+# In[20]:
 
 
 def takeActionF_8p(state, action):
@@ -100,7 +100,7 @@ def takeActionF_8p(state, action):
     return state
 
 
-# In[188]:
+# In[21]:
 
 
 def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit):
@@ -123,7 +123,7 @@ def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit):
         return "failure"
 
 
-# In[189]:
+# In[22]:
 
 
 def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDepth):
@@ -137,12 +137,76 @@ def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDe
     return "cutoff"
 
 
-# In[190]:
+# In[23]:
 
 
 def printPath_8p(startState, goalState, path):
     pass
 
+
+# ## Maze Functions
+
+# In[24]:
+
+
+def actionsF_maze(state):
+    i = state.index("O")
+    if i % 10 > 0 and state[i-1] != "x":
+        yield "left"
+    if i % 10 < 9 and state[i+1] != "x":
+        yield "right"
+    if i // 10 > 0 and state[i-10] != "x":
+        yield "up"
+    if i // 10 < 9 and state[i+10] != "x":
+        yield "down"
+
+
+# In[25]:
+
+
+def takeActionF_maze(state, action):
+    #this does not check if action is allowed
+    state = state.copy()
+    i = state.index("O")
+    if action == "right":
+        state[i], state[i+1] = state[i+1], state[i]
+    elif action == "left":
+        state[i], state[i-1] = state[i-1], state[i]
+    elif action == "up":
+        state[i], state[i-10] = state[i-10], state[i]
+    elif action == "down":
+        state[i], state[i+10] = state[i+10], state[i]
+    return state
+
+
+# In[26]:
+
+
+def printMaze_10(state):
+    for i in range(0,10):
+        print(*state[i*10:(i+1)*10], sep = " ")
+
+
+# In[34]:
+
+
+import random
+def regenerateMaze(state):
+    state = [random.sample(['x','-','-'],1)[0] for _ in range(0,100)] 
+    return state
+
+
+# In[32]:
+
+
+def printMazePath(result):
+    path = result[0].copy()
+    for i in result:
+        path[i.index("O")] = "~"
+    printMaze_10(path)
+
+
+# ## Testing 8p
 
 # In[191]:
 
@@ -306,7 +370,7 @@ startState = randomStartState(goalState, actionsF_8p, takeActionF_8p, 50)
 startState
 
 
-# In[ ]:
+# In[211]:
 
 
 path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 20)
@@ -315,7 +379,7 @@ path
 
 # Let's print out the state sequence in a readable form.
 
-# In[ ]:
+# In[212]:
 
 
 for p in path:
@@ -325,15 +389,103 @@ for p in path:
 
 # Here is one way to format the search problem and solution in a readable form.
 
-# In[ ]:
+# In[213]:
 
 
 printPath_8p(startState, goalState, path)
 
 
+# ## Testing the maze
+
+# First, we have our start and end mazes
+
+# In[11]:
+
+
+startState = ['O', 'x', '-', '-', '-', 'x', '-', 'x', 'x','-',
+ '-', '-', '-', '-', 'x', '-', '-',
+ '-', 'x', '-', 'x', 'x', 'x', '-', '-',
+ '-', 'x', 'x', '-', 'x', 'x', 'x', '-',
+ '-', '-', '-', '-', '-', 'x', 'x', 'x',
+ '-', 'x', 'x', 'x', '-', 'x',
+ '-', 'x', '-', '-', 'x', '-', 'x', 'x',
+ '-', '-', '-', '-', 'x', '-', '-', '-',
+ 'x', '-', '-', '-', '-', '-', 'x', 'x',
+ '-', 'x', 'x', '-', '-', '-', 'x', '-',
+ '-', 'x', '-', 'x', '-', '-', 'x', 'x',
+ '-', '-', 'x', 'x', 'x', '-', 'x', 'x',
+ '-', '-', 'x', '-', '-']
+printMaze_10(startState)
+goalState = startState.copy()
+goalState[0] = "-"
+goalState[99] = "O"
+print("The Goal: ")
+printMaze_10(goalState)
+
+
+# Some verification
+
+# In[13]:
+
+
+list(actionsF_maze(startState))
+
+
+# In[15]:
+
+
+downone = takeActionF_maze(startState,"down")
+printMaze_10(downone)
+
+
+# In[16]:
+
+
+list(actionsF_maze(downone))
+
+
+# In[29]:
+
+
+result = iterativeDeepeningSearch(startState, goalState, actionsF_maze, takeActionF_maze, 20)
+
+
+# In[33]:
+
+
+printMazePath(result)
+
+
+# In[35]:
+
+
+startState = regenerateMaze(startState)
+printMaze_10(startState)
+
+
+# In[41]:
+
+
+startState[92] = "-"
+goalState = startState.copy()
+startState[92] = "O"
+printMaze_10(startState)
+goalState[97] = "O"
+print("goal: ")
+printMaze_10(goalState)
+
+
+# In[52]:
+
+
+result = iterativeDeepeningSearch(startState, goalState, actionsF_maze, takeActionF_maze, 20)
+if result != "cutoff" and result != "failure":
+    printMazePath(result)
+
+
 # Download [A2grader.tar](A2grader.tar) and extract A2grader.py from it.
 
-# In[ ]:
+# In[214]:
 
 
 get_ipython().run_line_magic('run', '-i A2grader.py')

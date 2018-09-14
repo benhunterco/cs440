@@ -86,14 +86,15 @@ else:
     print(' 0/ 5 points. Your findBlank_8p should have returned 2 1 but you returned', r, c)
 
 print('\nTesting actionsF_8p([1, 2, 3, 4, 5, 6, 7, 0, 8])')
-acts = actionsF_8p([1, 2, 3, 4, 5, 6, 7, 0, 8])
+acts = list(actionsF_8p([1, 2, 3, 4, 5, 6, 7, 0, 8]))
 correct = ['left', 'right', 'up']
 if acts == correct:
     g += 10
     print('10/10 points. Your actionsF_8p correctly returned', acts)
 else:
     print(' 0/10 points. Your actionsF_8p should have returned', correct, 'but you returned', acts)
-
+    print('              Try ordering your action choices to match the correct answer.')
+    
 print('\nTesting takeActionF_8p([1, 2, 3, 4, 5, 6, 7, 0, 8],''up'')')
 s = takeActionF_8p([1, 2, 3, 4, 5, 6, 7, 0, 8],'up')
 correct = [1, 2, 3, 4, 0, 6, 7, 5, 8]

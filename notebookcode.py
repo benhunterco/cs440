@@ -1,36 +1,303 @@
 
 # coding: utf-8
 
-# # Assignment 2: Iterative-Deepening Search
+# # A3: A\*, IDS, and Effective Branching Factor
 
-# Ben Newell
-
-# ## Overview
-
-# This project gives an implemintation of the iterative deepening function and depth limited search. These strategies  are applied to the 8p, 15p and simple maze problem. 
+# For this assignment, implement the Recursive Best-First Search
+# implementation of the A\* algorithm given in class.  Name this function `aStarSearch`.  Also in this notebook include your `iterativeDeepeningSearch` functions.  Define a new function named `ebf` that returns an estimate of the effective
+# branching factor for a search algorithm applied to a search problem.
 # 
-# The 8 puzzle problem was discussed in class. 8 numbered pieces are shuffled across a board with only one free space to manipulate. By moving this free space in a series of steps, a goal state (usually having the numbers in order) can be reached. We represent it with a three by three grid, implemented as a list, where the 0 represents the blank space. The blank piece is then swapped with its neighbors to represent sliding across the board.  
+# So, the required functions are
 # 
-# The maze puzzle here is fairly simple. The goal is to find the path from one state to the other while navigating a grid with obstacles in the way. The problem space is a ten by ten grid where "-" represents a open space, "x" represents a blocked space, and "O" represents the current location of the maze solver. The "O" can only move left, right, up, or down.  The path is found by finding a path from the "O" in startState to the "O" goalState. When printed by `printMazePath` the path is designated by "~". 
+#    - `aStarSearch(startState, actionsF, takeActionF, goalTestF, hF)`
+#    - `iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDepth)`
+#    - `ebf(nNodes, depth, precision=0.01)`, returns the effective branching factor, given the number of nodes expanded and depth reached during a search.
 # 
-# Note: I realized at the end of the assignment the extra credit is mostly the same as the maze problem I came up with here. I had written the entire maze problem by the time I read the extra credit, so I'll treat that as extra credit and provide an implimentation for the 15 puzzle as well. The 15 puzzle is the same as the 8 puzzle, just with extra complexity. Instead of numbers 1 through 8, 1 through 15 are present on a four by four grid. 
+# Apply `iterativeDeepeningSearch` and `aStarSearch` to several eight-tile sliding puzzle
+# problems. For this you must include your implementations of these functions, from Assignment 2:
+# 
+#   * `actionsF_8p(state)`: returns a list of up to four valid actions that can be applied in `state`. With each action include a step cost of 1. For example, if all four actions are possible from this state, return [('left', 1), ('right', 1), ('up', 1), ('down', 1)].
+#   * `takeActionF_8p(state, action)`: return the state that results from applying `action` in `state` and the cost of the one step,
+#   
+# plus the following function for the eight-tile puzzle:
+# 
+#   * `goalTestF_8p(state, goal)`
+#   
+# Compare their results by displayng
+# solution path depth, number of nodes 
+# generated, and the effective branching factor, and discuss the results.  Do this by defining the following function that prints the table as shown in the example below.
+# 
+#    - runExperiment(goalState1, goalState2, goalState3, [h1, h2, h3])
+#    
+# Define this function so it takes any number of $h$ functions in the list that is the fourth argument.
 
-# # Functions and Explanations
+# ## Heuristic Functions
+# 
+# For `aStarSearch` use the following two heuristic functions, plus one more of your own design, for a total of three heuristic functions.
+# 
+#   * `h1_8p(state, goal)`: $h(state, goal) = 0$, for all states $state$ and all goal states $goal$,
+#   * `h2_8p(state, goal)`: $h(state, goal) = m$, where $m$ is the Manhattan distance that the blank is from its goal position,
+#   * `h3_8p(state, goal)`: $h(state, goal) = ?$, that you define.  It must be admissible, and not constant for all states.
 
-# ## Search Functions
+# ## Comparison
+
+# Apply all four algorithms (`iterativeDeepeningSearch` plus `aStarSearch` with the three heuristic
+# functions) to three eight-tile puzzle problems with start state
+# 
+# $$
+# \begin{array}{ccc}
+# 1 & 2 & 3\\
+# 4 & 0 & 5\\
+# 6 & 7 & 8
+# \end{array}
+# $$
+# 
+# and these three goal states.
+# 
+# $$
+# \begin{array}{ccccccccccc}
+# 1 & 2 & 3  & ~~~~ & 1 & 2 & 3  &  ~~~~ & 1 & 0 &  3\\
+# 4 & 0 & 5  & & 4 & 5 & 8  & & 4 & 5 & 8\\
+# 6 & 7 & 8 &  & 6 & 0 & 7  & & 2 & 6 & 7
+# \end{array}
+# $$
+
+# Print a well-formatted table like the following.  Try to match this
+# format. If you have time, you might consider learning a bit about the `DataFrame` class in the `pandas` package.  When displayed in jupyter notebooks, `pandas.DataFrame` objects are nicely formatted in html.
+# 
+#            [1, 2, 3, 4, 0, 5, 6, 7, 8]    [1, 2, 3, 4, 5, 8, 6, 0, 7]    [1, 0, 3, 4, 5, 8, 2, 6, 7] 
+#     Algorithm    Depth  Nodes  EBF              Depth  Nodes  EBF              Depth  Nodes  EBF          
+#          IDS       0      0  0.000                3     43  3.086               11 225850  2.954         
+#         A*h1       0      0  0.000                3    116  4.488               11 643246  3.263         
+#         A*h2       0      0  0.000                3     51  3.297               11 100046  2.733         
+# 
+# Of course you will have one more line for `h3`.
+
+# # Function Definitions
+
+# ### A* Functions and Node class
+
+# Here we have the node class. This represents the extra information that each node in a A* search needs to carry out the search successfully. H represents the value of the heuristic function at that node. G represents the total cost so far to get to that node, and F is the total of the two, making it an estimate of the total path cost. 
 
 # In[1]:
 
 
-def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit):
+class Node:
+    def __init__(self, state, f=0, g=0 ,h=0):
+        self.state = state
+        self.f = f
+        self.g = g
+        self.h = h
+    def __repr__(self):
+        return "Node(" + repr(self.state) + ", f=" + repr(self.f) +                ", g=" + repr(self.g) + ", h=" + repr(self.h) + ")"
+
+
+# Here is the `aStarSearch` which kicks off the A* search algorithm. It takes a startState representing the starting state of the puzzle, an actions function that allows successor states to be found, an action function that allows the states to be modified, a goal test function that can test for a successful state, as well as the heuristic function. It initializes the root `Node` with the given heuristic function, then passes it off to the helper.
+
+# In[2]:
+
+
+def aStarSearch(startState, actionsF, takeActionF, goalTestF, hF, countNodes = False):
+    h = hF(startState)
+    startNode = Node(state=startState, f=0+h, g=0, h=h)
+    node_count = [0] 
+    if countNodes: 
+        return aStarSearchHelper(startNode, actionsF, takeActionF, goalTestF, hF, float('inf'), 
+                                 node_count), node_count[0]
+    else:
+        return aStarSearchHelper(startNode, actionsF, takeActionF, goalTestF, hF, float('inf'), node_count)
+
+
+# Here is the recursive helper method for A* search. It takes a parent node and fmax, which represents a cutoff f value, as well as the functions that were passed into `aStarSearch` above. First it checks the simple case of whether the goal has been found or not. Then it creates a list of possible actions using the action function. If no actions exist, then moves can be made from this state. In that case "failure" and $\infty$ are returned because the goal state cannot ever be found. Otherwise, a list of children are generated using the action function. Each of these has a heuristic value H and path cost estimate F. We find the best cost estimate by sorting the children on F, and if this is higher than fmax the search is ended. Next we make the recursive call passing in the current best child and the second best as the new fmax. This means that if a higher f value is found than the second best, we end the search at that level and try again with the second best. 
+
+# In[3]:
+
+
+def aStarSearchHelper(parentNode, actionsF, takeActionF, goalTestF, hF, fmax, node_count):
+    if goalTestF(parentNode.state):
+        return ([parentNode.state], parentNode.g)
+    ## Construct list of children nodes with f, g, and h values
+    actions = actionsF(parentNode.state)
+    if not actions:
+        return ("failure", float('inf'))
+    children = []
+    for action, stepCost in actions:
+        childState = takeActionF(parentNode.state, action)
+        h = hF(childState)
+        g = parentNode.g + stepCost
+        f = max(h+g, parentNode.f)
+        childNode = Node(state=childState, f=f, g=g, h=h)
+        if node_count: node_count[0] += 1
+        children.append(childNode)
+    while True:
+        # find best child
+        children.sort(key = lambda n: n.f) # sort by f value
+        bestChild = children[0]
+        if bestChild.f > fmax:
+            return ("failure",bestChild.f)
+        # next lowest f value
+        alternativef = children[1].f if len(children) > 1 else float('inf')
+        # expand best child, reassign its f value to be returned value
+        result,bestChild.f = aStarSearchHelper(bestChild, actionsF, takeActionF, goalTestF,
+                                            hF, min(fmax,alternativef), node_count)
+        if result is not "failure":               
+            result.insert(0,parentNode.state)
+            retlist = [result, bestChild.f]
+            return tuple(retlist)        
+
+
+# ### Heuristic functions
+
+# The most simple possible heuristic function. Just estimates the cost as zero, which is never an over-estimate so it is admissible. 
+
+# In[4]:
+
+
+def h1_8p(state, goal):
+    return 0
+
+
+# Finds the manhattan distance of the current state from the goal state by using a manhattan distance. This is calculating by adding the verticle moves and the horizontal moves together to get to the location, like moving through blocks in Manhattan. 
+
+# In[5]:
+
+
+def h2_8p(state, goal):
+    currentIndex = state.index(0)
+    goalIndex = goal.index(0)
+    rowDelta = abs(currentIndex // 3 - goalIndex // 3)
+    colDelta = abs(currentIndex % 3 - goalIndex % 3)
+    return colDelta + rowDelta
+
+
+# ### Effective Branching Factor
+
+# In[6]:
+
+
+def ebf_calculation(depth, branch_guess):
+    if depth == 0:
+        return 1
+    if branch_guess == 1:
+        return depth
+    return (1-branch_guess ** (depth + 1)) /(1 - branch_guess)
+
+
+# In[7]:
+
+
+def ebf_helper(lower, upper, nNodes, depth, precision):
+    midpoint = (lower + upper) / 2
+    guessed_nodes = ebf_calculation(depth, midpoint)
+    if abs(nNodes - guessed_nodes) < precision:
+        return midpoint
+    if guessed_nodes < nNodes:
+        return ebf_helper(midpoint, upper, nNodes, depth, precision)
+    else:
+        return ebf_helper(lower, midpoint, nNodes, depth, precision)    
+
+
+# In[115]:
+
+
+def ebf(nNodes, depth, precision=0.01):
+    if nNodes == 0 and depth == 0:
+        return 0.000
+    return ebf_helper(1, nNodes, nNodes, depth, precision)
+
+
+# ### Goal Test Function
+
+# This is a simple goal test function, it just uses pythons list comparison to see whether the two lists are equal.
+
+# In[9]:
+
+
+def goalTestF_8p(state, goal):
+    return state == goal
+
+
+# ### Experiment Function
+# 
+# This is quite the function. It takes in three goalstates and runs them with `iterativeDeepeningSearch` and each heuristic in heuristicList with A*. Although it is a long function, all the work is going into repetitive function calls and formatting the output. The only calculation that is independent of the functions is correcting the depth by subtracting one from the solution list. We need to do this because both search methods add in the start state to the solution path, which is not counted as part of the depth. 
+
+# In[184]:
+
+
+import pandas
+def runExperiment(goalState1, goalState2, goalState3, heuristicList):
+    startState = [1, 2, 3, 4, 0, 5, 6, 7, 8]
+    print("\t" + str(goalState1) + "   "
+         + str(goalState2) + "   "
+         + str(goalState3))
+    
+    # Building the output
+    # How to join https://stackoverflow.com/questions/13079852/how-do-i-stack-two-dataframes-next-to-each-other-in-pandas
+    # First column is done here
+    rowNames = ["IDS"] + ["A*h" + str(s + 1) for s, _ in enumerate(heuristicList)] #NOICE
+    dataFrames = []
+    for goalState in [goalState1, goalState2, goalState3]:
+    
+        # Blank initialization
+        nodes = []
+        EBF = []
+        depths = []
+        # Get data from IDS
+        idsResult, nodeCount = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 20, True)
+        nodes.append(nodeCount)
+        EBF.append(ebf(nodeCount, len(idsResult) - 1)) # Note the -1 on depth, because start was appended
+        depths.append(len(idsResult) - 1)
+        # Loop through and do the previous for heuristicList
+        for h in heristicList:
+            hResult, nodeCount = aStarSearch(startState, actionsF_8p, takeActionF_8p, 
+                                 lambda s: goalTestF_8p(s, goalState),
+                                 lambda s: h(s, goalState), True)
+            nodes.append(nodeCount)
+            EBF.append(ebf(nodeCount, len(hResult[0]) - 1))
+            depths.append(len(hResult[0]) - 1)
+        dataFrames.append(pandas.DataFrame({"Algorithm":rowNames,
+                           "Depths": depths,
+                           "Nodes":nodes,
+                            "EBF": EBF, 
+                            "      ":["" for _ in range(0, len(hueristicList) + 1)]}).set_index("Algorithm"))#Maybe a little hacky
+    # print(dataFrames)
+    pandas.set_option("precision", 5)
+    #pandas.set_option("expand_frame_repr", False)
+    #keys = [str(l) for l in [goalState1, goalState2, goalState3]]
+    print(pandas.concat(dataFrames, axis=1))
+    
+
+
+# Example output of `runExperiment`. I put quite a lot of effort into matching the output. 
+
+# In[185]:
+
+
+g1 = [1,2,3,4,0,5,6,7,8]
+g2 = [1,2,3,4,5,8,6,0,7]
+g3 = [1,0,3,4,5,8,2,6,7]
+hlist = [h1_8p, h2_8p]
+runExperiment(g1,g2,g3,hlist)
+
+
+# ## Old Functions
+# From A2. Only small changes were made to `depthLimitedSearch` and `actionsF_8p`. Those changes are noted.
+
+# Added a variable for cost now that takeActionF usually returns a tuple. 
+
+# In[12]:
+
+
+def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit, node_count):
     if state == goalState:
         return []
     if depthLimit == 0:
         return "cutoff"
     cutoffoccurred = False
-    for action in actionsF(state):
-        childState = takeActionF(state, action)
-        result = depthLimitedSearch(childState, goalState, actionsF, takeActionF, depthLimit - 1)
+    for action, _ in actionsF(state):           # NEWER, this was actually the modified line
+        childState = takeActionF(state, action) # This was modified to deal with the new cost.
+        node_count[0] += 1
+        result = depthLimitedSearch(childState, goalState, actionsF, takeActionF, depthLimit - 1, node_count)
         if result == "cutoff":
             cutoffoccurred = True
         elif result != "failure":
@@ -42,72 +309,44 @@ def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit):
         return "failure"
 
 
-# `depthLimitedSearch` is a modification of depth FirstSearch that limits the maximum depth into the graph that the search can go. In this implementation we use a recursive strategy. `state`, `goalState`, `actionsF`, `takeActionF` and `depthLimit` are all passed into the function at each step of the recursion. First, it checks some base cases, that either we have found the goalState or that depthLimit has been reached. In this case we return [] or "cutoff" respectively. Otherwise, we set `cutoff` to false, indicating that another recursion can occur. For each action possible at this state, we call depthLimitedSearch with depthLimit-1 in order to continue the recursion. Then depending on the results of this call, we can either return cutoff, failure or the result path. 
-
-# In[2]:
+# In[57]:
 
 
-def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDepth):
+def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDepth, countNodes = False):
+    node_count = [0]
     for depth in range(0, maxDepth):
-        result = depthLimitedSearch(startState, goalState, actionsF, takeActionF, depth)
+        result = depthLimitedSearch(startState, goalState, actionsF, takeActionF, depth, node_count)
         if result == "failure":
             return "failure"
         if result != "cutoff":
             result.insert(0, startState)
-            return result
+            if countNodes:
+                return result, node_count[0]
+            else: 
+                return result
     return "cutoff"
 
 
-# `iterativeDeepeningSearch` is simple, it calls depthLimitedSearch at increasing depths until it reaches the max depth. If the result is a path, it prepends the startState to the path and returns it. It may also return "cutoff" indicating that the search did not find the goal, but unexplored nodes exist at further depth levels. Finally, a return of "failure" indicates that the all nodes have been searched and the result was not found. By searching in this manner, we can combine the low memory cost of depth first search with the other benefits of breadth first search. 
+# Converted this from a generator because of assignment requirements. Also added in the step cost of one to each action. 
 
-# ## 8 Puzzle Functions
-
-# In[3]:
-
-
-def findBlank_8p(state):
-    # find index of 0
-    index = state.index(0)
-    #return modulo and python op // for row and column
-    return index // 3, index % 3
-
-
-# This function uses a strategy of indexing that most other functions in this project use. We can use integer division and modulo in python to treat the list as a grid. Index // x where x is the number of values in a row will return the row of index. This is because of the properties of integer devision. As an example, index 5 // 3 = 1, meaning it is in the second row. Similarly, % can be used to find the column of an index. 5 % 3 = 2, meaning it is in the third column. Using this strategy, we can return the row and the column of the index as if state was stored in an array.
-
-# In[4]:
-
-
-def printState_8p(state):
-    state = state.copy()
-    state[state.index(0)] = "-"
-    #make each line as its own list
-    l1,l2,l3 = state[:3], state[3:6], state[6:]
-    #print theses lists seperated by a new line
-    for l in [l1,l2,l3]:
-        print(*l, sep = " ")
-    return
-
-
-# This function prints the state of an 8p in a readable fashion. 0 is replaced with "-" to represent the blank space. The list is broken up into three sub lists, each representing a row in the puzzle. Then we print each of these on a new line using some features of `print()` that allow the characters to appear without quotes and be seperated by a space. 
-
-# In[5]:
+# In[14]:
 
 
 def actionsF_8p(state):
     i = state.index(0)
+    actions = []
     if i % 3 > 0:
-        yield "left"
+        actions.append(("left",1))
     if i % 3 < 2:
-        yield "right"
+        actions.append(("right",1))
     if i // 3 > 0:
-        yield "up"
+        actions.append(("up",1))
     if i // 3 < 2:
-        yield "down"
+        actions.append(("down",1))
+    return actions
 
 
-# `actionsF_8p` is critical for iterative deepening search to function. Here it is implemented as a generator, so that actions are not found until they are needed. We determine the possible actions using // and %. Essentially, if the blank space is not up against a wall, it can move in that given direction. We check if it is against a wall with % for the left and right sides and // for the top and bottom. As an example, say the blank space is in the bottom left corner with an index of 6. We know that it can only move up and to the right logically. The function represents this because 6 % 3 = 0, so it will not yield "left". Similarly, it will not yield "down" because 6 // 3 = 2. In this way, the actions of a blank space can be calculated. 
-
-# In[6]:
+# In[15]:
 
 
 def takeActionF_8p(state, action):
@@ -125,9 +364,7 @@ def takeActionF_8p(state, action):
     return state
 
 
-# Continuing on the list indexing system, `takeActionF_8p` takes the action on a state by swapping the blank in the direciton of the desired move. For going left and right, this is as simple as a +1 or a -1. In order to go up or down, the length of the row is subtracted or added. In this case the rows are length 3.
-
-# In[7]:
+# In[16]:
 
 
 def printPath_8p(startState, goalState, path):
@@ -137,548 +374,199 @@ def printPath_8p(startState, goalState, path):
     printState_8p(goalState)
 
 
-# This simply prints out the solution path by printing out each state in `path` using `printState_8p`. The goal state is then added to the end. The solution, then, is represented by each successive step the search took to find the goal. Unfortunately, there is not a compact way of showing the solution like in the maze below, because the location of the numbers changes at each step along with the blank space. 
+# # Tests
 
-# ## 15 Puzzle Functions
+# ### Hueristic Functions
 
-# In[8]:
-
-
-def printState_15p(state):
-    state = state.copy()
-    state[state.index(0)] = "-"
-    #make each line as its own list
-    l1,l2,l3,l4 = state[:4], state[4:8], state[8:12], state[12:]
-    #print theses lists seperated by a new line
-    for l in [l1, l2, l3, l4]:
-        print(*l, sep = " ")
-    return
-
-
-# This is implemented the same as the 8p, but instead we add the extra row of the 15p and adjust the indices to match. 
-
-# In[9]:
-
-
-def actionsF_15p(state):
-    i = state.index(0)
-    if i % 4 > 0:
-        yield "left"
-    if i % 4 < 3:
-        yield "right"
-    if i // 4 > 0:
-        yield "up"
-    if i // 4 < 3:
-        yield "down"
-
-
-# This uses the same logic as the 8p as well. Except here we must check `i` against four because the puzzle has four rows and four columns.
-
-# In[10]:
-
-
-def takeActionF_15p(state, action):
-    #this does not check if action is allowed
-    state = state.copy()
-    i = state.index(0)
-    if action == "right":
-        state[i], state[i+1] = state[i+1], state[i]
-    elif action == "left":
-        state[i], state[i-1] = state[i-1], state[i]
-    elif action == "up":
-        state[i], state[i-4] = state[i-4], state[i]
-    elif action == "down":
-        state[i], state[i+4] = state[i+4], state[i]
-    return state
-
-
-# Once again the same, only we need to add or subtract four in order to go up or down a row in the 15p.
-
-# In[11]:
-
-
-def printPath_15p(startState, goalState, path):
-    for state in path:
-        printState_15p(state)
-        print()
-    printState_15p(goalState)
-
-
-# This is identical to the 8p, but calls the correct printState function.
-
-# ## Maze Functions
-
-# In[12]:
-
-
-def actionsF_maze(state):
-    i = state.index("O")
-    if i % 10 > 0 and state[i-1] != "x":
-        yield "left"
-    if i % 10 < 9 and state[i+1] != "x":
-        yield "right"
-    if i // 10 > 0 and state[i-10] != "x":
-        yield "up"
-    if i // 10 < 9 and state[i+10] != "x":
-        yield "down"
-
-
-# While this actions function is similar to the previous two, there are more conditions that must be met for a move to be possible. In addition to not going out of bounds, the action function must also avoid stepping into an "x". At each check the function looks to see whether the destination is out of bounds and then checks to see whether it is a valid move withing the maze construct. In this way we get an action function that behaves as if it was navigating through a maze by avoiding obstacles.
-
-# In[13]:
-
-
-def takeActionF_maze(state, action):
-    #this does not check if action is allowed
-    state = state.copy()
-    i = state.index("O")
-    if action == "right":
-        state[i], state[i+1] = state[i+1], state[i]
-    elif action == "left":
-        state[i], state[i-1] = state[i-1], state[i]
-    elif action == "up":
-        state[i], state[i-10] = state[i-10], state[i]
-    elif action == "down":
-        state[i], state[i+10] = state[i+10], state[i]
-    return state
-
-
-# Because the actions function only creates valid moves, we do not need to check for anything here in the take action function. It behaves similarly to the previous two, only adjusted for a grid size of ten.
-
-# In[14]:
-
-
-def printMaze_10(state):
-    for i in range(0,10):
-        print(*state[i*10:(i+1)*10], sep = " ")
-
-
-# This function is a reduced form of the previous two. Here we loop from 0 to 10 and print out a line for each. Each line prints the ten indices at that iteration of the loop. For example, on the second iteration, i = 1, we print `state[10:20]`. Each value is seperated by a space. As a result, we get a readable ten by ten representation of the maze. 
-
-# In[15]:
-
-
-import random
-def generateMaze():
-    state = [random.sample(['x','-','-'],1)[0] for _ in range(0,100)] 
-    return state
-
-
-# This function can be used to generate a random maze template. It generates a ten by ten grid where around 1/3 of the values are "x" and 2/3 of the values are "-". It is not guaranteed to be solvable, and the user must create the start and goal states by placing a "O" by hand. However, in my trials it usually created an interesting board to place starts and goals in. 
-
-# In[16]:
-
-
-def printMazePath(startState, goalState, path):
-    printingPath = path[0].copy()
-    for i in path:
-        printingPath[i.index("O")] = "~"
-    printingPath[startState.index("O")] = "S"
-    printingPath[goalState.index("O")] = "G"
-    print("Path from startState S to goalState G")
-    printMaze_10(printingPath)
-
-
-# Printing the maze solution is a little more flexible than the 8p or 15p solutions. Instead of printing a list of the steps, we can instead show the path of the solution directly. This works by iterating through the solution path and replacing the location of "O" in the printing list with "~". Then at the end we replace the start index of "O" with "S" to represent start, and the goal index of "O" with "G" to represent goal. At the end we are left with the solved maze drawn out in a readable form. 
-
-# ## Testing 8p
-
-# A list representation the 8p.
+# Pretty simple to test this one.
 
 # In[17]:
 
 
-startState = [1, 0, 3, 4, 2, 5, 6, 7, 8]
-goalState = [1, 2, 3, 4, 0, 5, 6, 7, 8]
+assert(0 == h1_8p("literally", "anything"))
+print("Test for h1_8p passed!")
 
-
-# Printed out by the printState function. Here we can visualize how the list is representing a grid or matrix even though it is one dimensional. 
 
 # In[18]:
 
 
-printState_8p(startState)
+startState = [0,1,2,3,4,5,6,7,8]
+goalState = [1,2,3,4,5,6,7,8,0]
+assert(4 == h2_8p(startState, goalState))
+goalState = takeActionF_8p(goalState, "left")
+assert(3 == h2_8p(startState, goalState))
+goalState = takeActionF_8p(goalState, "left")
+assert(2 == h2_8p(startState, goalState))
+goalState = takeActionF_8p(goalState, "up")
+assert(1 == h2_8p(startState, goalState))
+print("Tests for h2_8p passed!")
 
 
-# Testing the `findBlank_8p` function. Although it is required, I stick to index and some division to implement my functions instead of using tuple indexing.
+# ### Goal Test Functions
 
 # In[19]:
 
 
-assert(findBlank_8p(startState) == (0,1))
-assert(findBlank_8p([1,2,3,0,5,6,7,8,4]) == (1,0))
-assert(findBlank_8p([1,2,3,8,5,6,7,4,0]) == (2,2))
-assert(findBlank_8p([1,2,3,8,0,6,7,4,5]) == (1,1))
-print("All tests passed for findBlank_8p")
+startState = [1, 2, 3, 4, 5, 6, 7, 8, 0]
+goalState = startState.copy()
+assert(True == goalTestF_8p(startState, goalState))
+goalState = takeActionF_8p(goalState, "left")
+assert(False == goalTestF_8p(startState, goalState))
+print("Tests of goalTestF_8p passed!")
 
 
-# Testing `actionsF_8p` using "corner" cases.
+# ### Effective Branching Factor Testing
+
+# First, some example output for the ebf function.  During execution, this example shows debugging output which is the low and high values passed into a recursive helper function.
 
 # In[20]:
 
 
-actionList = list(actionsF_8p(startState))
-assert(actionList == ['left', 'right', 'down'])
-bottomRight, bottomLeft = [1,2,3,8,5,6,7,4,0], [1,2,3,8,5,6,0,4,7]
-topRight, topLeft = [1,2,0,8,5,6,7,4,1],[0,2,3,8,5,6,7,4,1]
-center = [1,2,3,4,0,5,6,7,8]
-actionList = list(actionsF_8p(bottomRight))
-assert(actionList == ['left', 'up'])
-actionList = list(actionsF_8p(bottomLeft))
-assert(actionList == ['right', 'up'])
-actionList = list(actionsF_8p(topRight))
-assert(actionList == ['left', 'down'])
-actionList = list(actionsF_8p(topLeft))
-assert(actionList == ['right', 'down'])
-actionList = list(actionsF_8p(center))
-assert(actionList == ['left', 'right', 'up', 'down'])
-print("Tests for actionsF_8p passed")
+ebf(10, 3)
 
 
-# Demonstrating moving the blank tile in the puzzle. This shows the state before and after the move.
+# The smallest argument values should be a depth of 0, and 1 node.
 
-# In[21]:
-
-
-printState_8p(startState)
-print("Moves down to")
-printState_8p(takeActionF_8p(startState, 'down'))
+# In[109]:
 
 
-# First, a quick demonstration of `depthLimitedSearch`.
-
-# In[22]:
+ebf(0,0)
 
 
-path = depthLimitedSearch(startState, goalState, actionsF_8p, takeActionF_8p, 3)
-path
+# In[110]:
 
 
-# As pointed out in the assignment, the `depthLimitedSearch` does not contain the start state.  This is inserted by `iterativeDeepeningSearch`.
-# 
-# When we use `iterativeDeepeningSearch` a shorter path with the start state present is found. We also gain the benefits of increasing the depth limit in an iterative fashion, so the goal may be found earlier.
-
-# In[23]:
+ebf(1, 0)
 
 
-path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 3)
-path
+# In[111]:
 
 
-# Here we demonstrate `iterativeDeepeningSearch` not finding the goal.
-
-# In[24]:
+ebf(2, 1)
 
 
-startState = [4, 7, 2, 1, 6, 5, 0, 3, 8]
-path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 5)
-path
+# In[112]:
 
 
-# Here I have compacted the assignment code to generate random startStates. It works by taking a random choice from the actionsF of each state, so that we know it started from a valid start. 
-
-# In[25]:
+ebf(2, 1, precision=0.000001)
 
 
-import random
-def randomStartState(goalState, actionsF, takeActionF, nSteps):
-    state = goalState
-    for i in range(nSteps):
-        l = list(actionsF(state))
-        state = takeActionF(state, random.choice(l))
-    return state
+# In[113]:
 
+
+ebf(200000, 5)
+
+
+# In[114]:
+
+
+ebf(200000, 50)
+
+
+# ### Testing Node Counting
+# This is used to find the count of nodes in an experiment. 
 
 # In[26]:
 
 
-goalState = [1, 2, 3, 4, 0, 5, 6, 7, 8]
-randomStartState(goalState, actionsF_8p, takeActionF_8p, 10)
+startState = [1,2,3,4,0,5,6,7,8]
+goalState = [1,2,3,4,5,8,6,0,7]
+a, nodeCount = aStarSearch(startState, actionsF_8p, takeActionF_8p, 
+                                 lambda s: goalTestF_8p(s, goalState),
+                                 lambda s: h1_8p(s, goalState), True)
+print(len(a))
+assert(nodeCount == 116)
+_, nodeCount = aStarSearch(startState, actionsF_8p, takeActionF_8p, 
+                                 lambda s: goalTestF_8p(s, goalState),
+                                 lambda s: h2_8p(s, goalState), True)
+print(len(_))
+assert(nodeCount == 51)
+_, nodeCount = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 10, True)
+assert(nodeCount == 43)
+print(len(_))
+print("Tests of counting funcitonality passed!")
 
+
+# ### Given Trial Run
+
+# Here is a simple example using our usual simple graph search.
 
 # In[27]:
 
 
-startState = randomStartState(goalState, actionsF_8p, takeActionF_8p, 50)
-startState
+def actionsF_simple(state):
+    succs = {'a': ['b', 'c'], 'b':['a'], 'c':['h'], 'h':['i'], 'i':['j', 'k', 'l'], 'k':['z']}
+    return [(s, 1) for s in succs.get(state, [])]
 
+def takeActionF_simple(state, action):
+    return action
 
-# Here we solve the randomly created startState and print it out using `printPath_8p` which prints out each step in a readable format. 
+def goalTestF_simple(state, goal):
+    return state == goal
+
+def h_simple(state, goal):
+    return 1
+
 
 # In[28]:
 
 
-path = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 20)
-printPath_8p(startState, goalState, path)
+actions = actionsF_simple('a')
+actions
 
-
-# Looks like it worked! On to the next puzzle.
-
-# ## Testing 15p
-
-# Here is a sample start and goal state for the 15p problem.
 
 # In[29]:
 
 
-goalState = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]
-startState = [0, 2, 3, 4, 1, 6, 7, 8, 5, 14, 10, 11, 9, 13, 15, 12]
+takeActionF_simple('a', actions[0])
 
 
 # In[30]:
 
 
-print("startState: ")
-printState_15p(startState) 
-print("goalState: ")
-printState_15p(goalState)
+goalTestF_simple('a', 'a')
 
-
-# First, we use assertions to test `actionsF_15p`
 
 # In[31]:
 
 
-assert(list(actionsF_15p(startState)) == ["right", "down"])  
-assert(list(actionsF_15p(goalState)) == ["left", "up"])
-print("Tests of actionsF_15p  Passed")
+h_simple('a', 'z')
 
-
-# Then, visually confirm that the desired moves are done by `takeActionF_15p`
 
 # In[32]:
 
 
-print("startState: ")
-printState_15p(startState)
-print("Moves down to")
-printState_15p(takeActionF_15p(startState, 'down'))
-print("and moves right to")
-printState_15p(takeActionF_15p(startState, 'right'))
+iterativeDeepeningSearch('a', 'z', actionsF_simple, takeActionF_simple, 10)
 
-
-# Finally, a demonstration of solving the 15p with `iterativeDeepeningSearch`.
 
 # In[33]:
 
 
-path = iterativeDeepeningSearch(startState, goalState, actionsF_15p, takeActionF_15p, 15)
-printPath_15p(startState, goalState, path)
+aStarSearch('a',actionsF_simple, takeActionF_simple,
+            lambda s: goalTestF_simple(s, 'z'),
+            lambda s: h_simple(s, 'z'))
 
 
-# Looks like it works correctly for solvable 15 puzzles! What about an unsolvable 15p? This uses the simple [example](https://en.wikipedia.org/wiki/File:15-puzzle-loyd.svg) of an unsolvable puzzle from wikipedia. 
+# ## Grading
+
+# Download [A3grader.tar](http://www.cs.colostate.edu/~anderson/cs440/notebooks/A3grader.tar) and extract A3grader.py from it.
 
 # In[34]:
 
 
-startState = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 14, 0]
-goalState = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]
-print("startState: ")
-printState_15p(startState)
-print("goalState: ")
-printState_15p(goalState)
+get_ipython().run_line_magic('run', '-i A3grader.py')
 
 
-# Here we see `iterativeDeepeningSearch` try to find a goal that cannot be found and reach a cutoff.
+# ## Extra Credit
 
-# In[35]:
-
-
-iterativeDeepeningSearch(startState, goalState, actionsF_15p, takeActionF_15p, 15)
-
-
-# Finally, a random startState.
-
-# In[42]:
-
-
-startState = randomStartState(goalState, actionsF_15p, takeActionF_15p, 20)
-result = iterativeDeepeningSearch(startState, goalState,actionsF_15p, takeActionF_15p, 17)
-printPath_15p(startState, goalState, result)
-
-
-# This can be run several times to see different outcomes of iterative deepening search.
-
-# ## Testing the maze
-
-# First, we have our start and goal states of the maze. "O" will move about the maze similar to how "-" did in the 8 puzzle. 
-
-# In[36]:
-
-
-startState = ['O', 'x', '-', '-', '-', 'x', '-', 'x', 'x','-',
- '-', '-', '-', '-', 'x', '-', '-',
- '-', 'x', '-', 'x', 'x', 'x', '-', '-',
- '-', 'x', 'x', '-', 'x', 'x', 'x', '-',
- '-', '-', '-', '-', '-', 'x', 'x', 'x',
- '-', 'x', 'x', 'x', '-', 'x',
- '-', 'x', '-', '-', 'x', '-', 'x', 'x',
- '-', '-', '-', '-', 'x', '-', '-', '-',
- 'x', '-', '-', '-', '-', '-', 'x', 'x',
- '-', 'x', 'x', '-', '-', '-', 'x', '-',
- '-', 'x', '-', 'x', '-', '-', 'x', 'x',
- '-', '-', 'x', 'x', 'x', '-', 'x', 'x',
- '-', '-', 'x', '-', '-']
-print("The Start: ")
-printMaze_10(startState)
-goalState = startState.copy()
-goalState[0] = "-"
-goalState[99] = "O"
-print("The Goal: ")
-printMaze_10(goalState)
-
-
-# First, test the actions function.
-
-# In[37]:
-
-
-assert(list(actionsF_maze(startState)) == ['down'])
-assert(list(actionsF_maze(goalState)) == ['left'])
-print("Test Passed")
-
-
-# Next, test the take action function from a few states.
-
-# In[38]:
-
-
-print("We expect \"O\" to have moved down a space")
-downone = takeActionF_maze(startState,"down")
-printMaze_10(downone)
-print("We expect \"O\" to have moved right a space")
-rightone = takeActionF_maze(downone, "right")
-printMaze_10(rightone)
-
-
-# An additional test of `actionsF_maze` with the new state we generated
-
-# In[39]:
-
-
-assert(list(actionsF_maze(downone)) == ['right', 'up'])
-print("Test Passed")
-
-
-# Finally, try out `iterativeDeepeningSearch` to see whether it works!
-
-# In[40]:
-
-
-result = iterativeDeepeningSearch(startState, goalState, actionsF_maze, takeActionF_maze, 20)
-printMazePath(startState, goalState, result)
-
-
-# Looks like the first startState and goalState worked! Next we can generate more cases to test.
-
-# In[41]:
-
-
-startState = generateMaze()
-printMaze_10(startState)
-
-
-# This created an empty template where the user can place an "O" for the startState and the goalState. It is not guaranteed to be solvable however. 
-
-# In[42]:
-
-
-goalState = startState.copy()
-startState[0] = "O"
-print("startState: ")
-printMaze_10(startState)
-goalState[0] = "-"
-goalState[99] = "O"
-print("goalState: ")
-printMaze_10(goalState)
-
-
-# You can usually eyeball whether the maze is solvable or not in a few seconds. Lets see how long `iterativeDeepeningSearch` takes to find out! You may run the previous cells over again to try a few different random states.
-
-# In[43]:
-
-
-result = iterativeDeepeningSearch(startState, goalState, actionsF_maze, takeActionF_maze, 20)
-if result != "cutoff" and result != "failure":
-    printMazePath(startState, goalState, result)
-else:
-    print(result + " at this Max Depth")
-
-
-# It may take awhile if there is no solution. But it does demonstrate the "cutoff" part of `iterativeDeepeningSearch`.
-
-# Here are a few pre-made solvable cases to demonstrate the maze solver. It is a messy block of hard coded lists, feel free to skip over. 
-
-# In[44]:
-
-
-start1 = ['-', '-', '-', '-', 'x', 'x', '-', '-', 'x', 'x', '-', '-', '-', 'x', 'x', 'x',
- '-', '-', 'x', '-', 'x', '-', '-', '-', '-', '-', 'x', '-', '-', '-', '-', '-',
- 'x', 'x', 'x', '-', '-', '-', '-', '-', 'x', 'x', '-', '-', '-', '-', 'x', 'x',
- 'x', 'x', 'x', '-', '-', '-', '-', '-', '-', 'x', '-', '-', '-', '-', '-', '-',
- '-', '-', '-', '-', 'x', '-', '-', '-', '-', '-', '-', 'x', '-', '-', '-', 'x',
- '-', 'x', '-', '-', 'x', '-', 'x', 'x', '-', 'x', '-', '-', 'O', '-', 'x', 'x',
- '-', '-', '-', 'x']
-goal1 = ['-', '-', '-', '-', 'x', 'x', '-', '-', 'x', 'x', '-', '-', '-', 'x', 'x', 'x',
- '-', '-', 'x', '-', 'x', '-', '-', '-', '-', '-', 'x', '-', '-', '-', '-', '-',
- 'x', 'x', 'x', '-', '-', '-', '-', '-', 'x', 'x', '-', '-', '-', '-', 'x', 'x',
- 'x', 'x', 'x', '-', '-', '-', '-', '-', '-', 'x', '-', '-', '-', '-', '-', '-',
- '-', '-', '-', '-', 'x', '-', '-', '-', '-', '-', '-', 'x', '-', '-', '-', 'x',
- '-', 'x', '-', '-', 'x', '-', 'x', 'x', '-', 'x', '-', '-', '-', '-', 'x', 'x',
- '-', 'O', '-', 'x']
-case2 = ['-', '-', '-', '-', '-', '-', '-', '-',
- '-', 'x', '-', 'x', 'x', '-', 'x', '-', '-', '-', 'x', '-', '-', 'x', 'x', '-',
- '-', '-', '-', '-', 'x', '-', '-', 'x', 'x', '-', 'x', '-', '-', 'x', 'x', '-',
- '-', '-', 'x', '-', 'x', '-', 'x', 'x', 'x', 'x', '-', '-', 'x', 'x', '-', '-',
- '-', 'x', '-', '-', 'x', 'x', 'x', '-', '-', '-', '-', '-', '-', '-', '-', '-',
- '-', '-', 'x', '-', 'x', '-', 'x', 'x', '-', '-', '-', 'x', '-', '-', '-', 'x',
- '-', 'x', '-', '-', '-', '-', 'x', '-', '-', '-', 'x', '-']
-goal2 = case2.copy()
-start2 = case2.copy()
-start2[0] = "O"
-goal2[90] = "O"
-case3 = ['-', '-',
- '-', '-', '-', '-', '-', '-', '-', 'x', '-', 'x', 'x', '-', 'x', '-', '-',
- '-', 'x', '-', '-', 'x', 'x', '-', '-', '-', '-', '-', 'x', '-', '-', 'x', 'x',
- '-', 'x', '-', '-', 'x', 'x', '-', '-', '-', 'x', '-', 'x', '-', 'x', 'x', 'x',
- 'x', '-', '-', 'x', 'x', '-', '-', '-', 'x', '-', '-', 'x', 'x', 'x', '-', '-',
- '-', '-', '-', '-', '-', '-', '-', '-', '-', 'x', '-', 'x', '-', 'x', 'x', '-',
- '-', '-', 'x', '-', '-', '-', 'x', '-', 'x', '-', '-', '-', '-', 'x', '-', '-',
- '-', 'x', '-']
-goal3 = case3.copy()
-start3 = case3.copy()
-start3[51] = "O"
-goal3[54] = "O"
-case4 = ['x', '-', '-', '-', '-', '-', '-', '-', '-', 'x', '-', '-', 'x', 'x', 'x', '-',
- '-', 'x', '-', '-', 'x', '-', 'x', '-', '-', '-', 'x', 'x', '-', '-', '-', '-',
- '-', 'x', '-', '-', '-', '-', 'x', '-', 'x', '-', '-', '-', 'x', 'x', '-', '-',
- 'x', 'x', '-', '-', '-', '-', '-', '-', 'x', '-', '-', '-', '-', 'x', '-', '-',
- 'x', '-', '-', '-', 'x', 'x', 'x', '-', '-', '-', '-', 'x', '-', '-', '-', '-',
- '-', '-', '-', 'x', '-', '-', '-', '-', '-', '-', '-', '-', '-', 'x', 'x', 'x',
- '-', 'x', 'x', '-']
-goal4 = case4.copy()
-start4 = case4.copy()
-start4[39] = "O"
-goal4[50] = "O"
-
-
-# **Demonstration of Extra Credit**
+# Add a third column for each result (from running `runExperiment`) that is the number of seconds each search required.  You may get the total run time when running a function by doing
 # 
-# Here we demonstrate four cases of the maze solver. More cases can be generated with the `generateMaze` function, which gives a ten by ten grid with a distribution of impassable x's and passable -'s. The start and goal locations must be placed by hand by setting the desired start index to "O" and the desired goal index to "O" in their respective lists. I've generated a few sample problems to demonstrate the maze solver. It is worth mentioning that although this is not exactly like the description of the extra credit, I came up with this problem and implemented it before I noticed the extra credit option. Because they are essentially the same (a maze is just multiple verticle and horizontal obstacles) I left it in. This took a little while to run on my laptop, about a minute.  
-
-# In[45]:
-
-
-cases = [(start1, goal1),(start2, goal2),(start3, goal3),(start4, goal4)]
-for case in cases:
-    result = iterativeDeepeningSearch(case[0], case[1], actionsF_maze, takeActionF_maze, 20)
-    if result != "cutoff" and result != "failure":
-        printMazePath(case[0], case[1], result)
-    else:
-        print(result + " at this Max Depth")
-
-
-# download [A2grader.tar](A2grader.tar) and extract A2grader.py from it.
-
-# ## Conclusion
-# The `iterativeDeepeningSearch` function has been applied successfully to three different types of puzzles. While it is not always fast, it does work well in the examples demonstrated here. In the process of this project, I encountered a few problems. The 8p was fairly straightforward following the example given in the class notebook. However, it was difficult to think of other problems to try it out on. At first I thought of the maze problem, which does work well with this search strategy. The biggest problem I faced was that I read the extra credit late into the assignment and wanted to come up with an additional problem. While it was not too much work, implementing the 15p did stretch my time a little thin. Other than that, I did not have many other issues. 
+#      import time
+#     
+#      start_time = time.time()
+#     
+#      < do some python stuff >
+#     
+#      end_time = time.time()
+#      print('This took', end_time - start_time, 'seconds.')
+# 

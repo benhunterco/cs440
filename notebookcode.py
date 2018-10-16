@@ -79,7 +79,7 @@
 
 # Here we have the node class. This represents the extra information that each node in a A* search needs to carry out the search successfully. H represents the value of the heuristic function at that node. G represents the total cost so far to get to that node, and F is the total of the two, making it an estimate of the total path cost. 
 
-# In[1]:
+# In[3]:
 
 
 class Node:
@@ -96,7 +96,7 @@ class Node:
 # 
 # Node counting has also been implemented in addition to the supplied code. An additional default initialized variable is included so that the search returns the expected output normally. Python passes primitives by value, but to avoid using globals the node count is stored in an array. This way we can always access the same int by just using node_count[0]. If countNodes is set to True, we return the expected result in addition to the value of node_count.
 
-# In[2]:
+# In[4]:
 
 
 def aStarSearch(startState, actionsF, takeActionF, goalTestF, hF, countNodes = False):
@@ -114,7 +114,7 @@ def aStarSearch(startState, actionsF, takeActionF, goalTestF, hF, countNodes = F
 # 
 # node_count is an additional variable added on top of the supplied code. In order to avoid using globals, nodes are counted by using the zeroth index of the array node_count. It is pretty easy to tell when to count a node here, any time the `Node` constructor is called, we increment the total node count.
 
-# In[3]:
+# In[5]:
 
 
 def aStarSearchHelper(parentNode, actionsF, takeActionF, goalTestF, hF, fmax, node_count):
@@ -156,7 +156,7 @@ def aStarSearchHelper(parentNode, actionsF, takeActionF, goalTestF, hF, fmax, no
 # 
 # The most simple possible heuristic function. Just estimates the cost as zero, which is never an over-estimate so it is admissible. 
 
-# In[4]:
+# In[6]:
 
 
 def h1_8p(state, goal):
@@ -167,7 +167,7 @@ def h1_8p(state, goal):
 # 
 # Finds the manhattan distance of the current state from the goal state by using a manhattan distance. This is calculating by adding the verticle moves and the horizontal moves together to get to the location, like moving through blocks in Manhattan. This will never over estimate the goal because the blank tile must move in a over and up fashion like the Manhattan distance calculates, and the best case is that only the blank tile has to move to the goal state. 
 
-# In[5]:
+# In[7]:
 
 
 def h2_8p(state, goal):
@@ -182,7 +182,7 @@ def h2_8p(state, goal):
 # 
 # Counts the total number of none-blank tiles that are not in their goalstate. This is an admissible heuristic because the total number of tiles out of place can never be more that the moves required to make the goalstate. This is because a tile must move for a cost of at least one to go from one state to another. It is also a reasonable guess because as we get closer to the solution, fewer tiles will be out of place. 
 
-# In[6]:
+# In[8]:
 
 
 def h3_8p(state, goal):
@@ -197,7 +197,7 @@ def h3_8p(state, goal):
 # 
 # Counts the out number of tiles out of their goal column and out of their goal row. [Here](http://www.cs.rpi.edu/academics/courses/fall00/ai/assignments/assign3heuristics.html) is the source for the heuristic. We accomplish this goal by using the symmetric difference between the goal row or column and the state row or column. The length of the symmetric difference tells us how many nodes are out of place. The heuristic is, as it turns out, is not admissible. I wrote the function for it and it seems to work. Howerver, it overestimates the cost remaining. A simple example illustrates why it isn't admissible. Say the startState was the solved goal state with the blank spot moved up one so that 0 and 2 had switched places. This heuristic would estimate the cost of two, because it would count the zero out of place and the two out of place. This is more than the actual cost of one, so the heuristic is not admissible. I left in just to look at how it might behave.
 
-# In[7]:
+# In[9]:
 
 
 def h4_8p(state, goal):
@@ -229,7 +229,7 @@ def h4_8p(state, goal):
 
 # This is a helper function that calculates the quantity of $\frac{1-b^{d+1}}{1-b}$, which finds the number of nodes, $n$ given the depth, $d$ and branching factor $b$. This helps to compartmentalize the code a bit. It also has a few hard coded values where there is an expected result but the algorithm fails to work correctly. If branch_guess = 1, then a /0 will occur. Although the algorithm does not work with this value, we know that if branch_guess is 1 the number of nodes is just depth * 1. Depth = 0 is also not anticipated by this algorithm and branching factor does not really exist if there is not a single branch, so 1 is hard coded when depth = 0. 
 
-# In[8]:
+# In[10]:
 
 
 def ebf_calculation(depth, branch_guess):
@@ -242,7 +242,7 @@ def ebf_calculation(depth, branch_guess):
 
 # This is the helper method that does binary search in order to find EBF. It takes a lower and upper bound, as well as the real number of nodes, depth and precision. It calculates the midpoint of upper and lower, then finds the guess of the nodes using `ebf_calculation`. If the difference between this calculated quantity and the true number of nodes is less than precision, the search is done and we can return midpoint as the value of the branching factor. Otherwise we check to see whether the guessed number of nodes is less than the real number, and recursively call `ebf_helper` using midpoint as the lower bound. Otherwise, we know that the branch factor is lower than our guess, so we call `ebf_helper` with lower and midpoint as the bounds. 
 
-# In[9]:
+# In[11]:
 
 
 def ebf_helper(lower, upper, nNodes, depth, precision):
@@ -258,7 +258,7 @@ def ebf_helper(lower, upper, nNodes, depth, precision):
 
 # This starts of the search for ebf. It has a hard coded case for when both nNodes and depth = 0 to protect against infinite recursion. It uses 1 as the minimum branching factor, and nNodes as the maximum to give to `ebf_helper` because these are the minimum and maximum possible values for the given branching factor.
 
-# In[10]:
+# In[12]:
 
 
 def ebf(nNodes, depth, precision=0.01):
@@ -271,7 +271,7 @@ def ebf(nNodes, depth, precision=0.01):
 
 # This is a simple goal test function, it just uses pythons list comparison to see whether the two lists are equal.
 
-# In[11]:
+# In[13]:
 
 
 def goalTestF_8p(state, goal):
@@ -282,16 +282,16 @@ def goalTestF_8p(state, goal):
 # 
 # This is quite the function. It takes in three goalstates and runs them with `iterativeDeepeningSearch` and each heuristic in heuristicList with A*. Although it is a long function, all the work is going into repetitive function calls and formatting the output. The only calculation that is independent of the functions is correcting the depth by subtracting one from the solution list. We need to do this because both search methods add in the start state to the solution path, which is not counted as part of the depth. 
 
-# In[41]:
+# In[56]:
 
 
 import pandas
 import time
 def runExperiment(goalState1, goalState2, goalState3, heuristicList):
     startState = [1, 2, 3, 4, 0, 5, 6, 7, 8]
-    print("\t" + str(goalState1) + "   "
-         + str(goalState2) + "   "
-         + str(goalState3))
+    #print("\t" + str(goalState1) + "   "
+    #     + str(goalState2) + "   "
+    #     + str(goalState3))
     
     # Building the output
     # How to concat https://stackoverflow.com/questions/13079852/how-do-i-stack-two-dataframes-next-to-each-other-in-pandas
@@ -306,7 +306,7 @@ def runExperiment(goalState1, goalState2, goalState3, heuristicList):
         times = []
         # Get data from IDS
         startTime = time.time()
-        idsResult, nodeCount = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 20, True)
+        idsResult, nodeCount = iterativeDeepeningSearch(startState, goalState, actionsF_8p, takeActionF_8p, 12, True)
         endTime = time.time()
         times.append(endTime - startTime)
         nodes.append(nodeCount)
@@ -327,13 +327,13 @@ def runExperiment(goalState1, goalState2, goalState3, heuristicList):
                            "Depths": depths,
                            "Nodes":nodes,
                             "EBF": EBF, 
-                            "Time": times}).set_index("Algorithm"))#Maybe a little hacky
+                            "Time (sec)": times}).set_index("Algorithm"))
     # print(dataFrames)
     pandas.set_option("precision", 3)
-    pandas.option_context("display.colheader_justify", "right")
+    #pandas.option_context("display.colheader_justify", "right")
     #pandas.set_option("expand_frame_repr", False)
     keys = [str(l) for l in [goalState1, goalState2, goalState3]]
-    print(pandas.concat(dataFrames, axis=1))
+    print(pandas.concat(dataFrames, axis=1, keys = keys))
     
 
 
@@ -346,7 +346,7 @@ def runExperiment(goalState1, goalState2, goalState3, heuristicList):
 
 # Added a variable for cost now that takeActionF returns a tuple. In addition, added the node counting functionality. Node_count is an array passed in with the total node count at index 0. Each action we explore in the actionsF for loop represents a created node, so for each iteration of this loop we increment node_count[0].
 
-# In[13]:
+# In[15]:
 
 
 def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit, node_count):
@@ -372,7 +372,7 @@ def depthLimitedSearch(state, goalState, actionsF, takeActionF, depthLimit, node
 
 # countNodes is added to indicate whether to return just the result or the result with node_count. 
 
-# In[14]:
+# In[54]:
 
 
 def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDepth, countNodes = False):
@@ -380,19 +380,25 @@ def iterativeDeepeningSearch(startState, goalState, actionsF, takeActionF, maxDe
     for depth in range(0, maxDepth):
         result = depthLimitedSearch(startState, goalState, actionsF, takeActionF, depth, node_count)
         if result == "failure":
-            return "failure"
+            if countNodes:
+                return "failure", node_count[0]
+            else:
+                return "failure"
         if result != "cutoff":
             result.insert(0, startState)
             if countNodes:
                 return result, node_count[0]
             else: 
                 return result
-    return "cutoff"
+    if countNodes:
+        return "cutoff", node_count[0]
+    else:
+        return "cutoff"
 
 
 # Converted this from a generator because of assignment requirements. Also added in the step cost of one to each action. 
 
-# In[15]:
+# In[17]:
 
 
 def actionsF_8p(state):
@@ -409,7 +415,7 @@ def actionsF_8p(state):
     return actions
 
 
-# In[16]:
+# In[18]:
 
 
 def takeActionF_8p(state, action):
@@ -428,7 +434,7 @@ def takeActionF_8p(state, action):
     return newState, action[1]
 
 
-# In[17]:
+# In[19]:
 
 
 def printPath_8p(startState, goalState, path):
@@ -444,7 +450,7 @@ def printPath_8p(startState, goalState, path):
 
 # These test to make sure that the costs are correctly handled by the old A2 functions.
 
-# In[18]:
+# In[20]:
 
 
 startState = [1,2,3,4,0,5,6,7,8]
@@ -461,7 +467,7 @@ print("Tests for old functions passed")
 
 # Pretty simple to test this one.
 
-# In[19]:
+# In[21]:
 
 
 assert(0 == h1_8p("literally", "anything"))
@@ -470,7 +476,7 @@ print("Test for h1_8p passed!")
 
 # Here we test the expected values of the Manhattan Heuristic. It is simple to visually confirm the values by counting the horizontal and verticle moves required. This test checks the value of the heuristic as the blank approaches the goal state. 
 
-# In[20]:
+# In[22]:
 
 
 startState = [0,1,2,3,4,5,6,7,8]
@@ -487,7 +493,7 @@ print("Tests for h2_8p passed!")
 
 # We test the tiles out of place heuristic in a similar fashion to the previous. The first case makes sure that it estimates one when only one remove remains. The others check other values. These were verified by hand by counting the out of place numbers excluding zero. Eight is the highest it can return as a predicted distance, because no more than eight pieces can be out of place in the 8-puzzle. 
 
-# In[21]:
+# In[23]:
 
 
 startState = [1,2,3,4,0,5,6,7,8]
@@ -504,7 +510,7 @@ print("h3_8p tests successful!")
 
 # `goaltTestF_8p` is fairly simple to test. We make two identical lists and test if the function returns true. Then modify one of those lists and see if it returns false. 
 
-# In[22]:
+# In[24]:
 
 
 startState = [1, 2, 3, 4, 5, 6, 7, 8, 0]
@@ -519,7 +525,7 @@ print("Tests of goalTestF_8p passed!")
 
 # First, test the calculation helper function first by using some handmade examples.
 
-# In[23]:
+# In[25]:
 
 
 assert(7 == ebf_calculation(2,2))
@@ -530,7 +536,7 @@ print("Tests of ebf_calculation passed!")
 
 # Now, test the main recursive funciton `ebf`. Tests a few intermediate values and to make sure the hardcoding works. 
 
-# In[24]:
+# In[26]:
 
 
 assert(-0.0001 < ebf(0,0) < 0.0001)
@@ -545,7 +551,7 @@ print("Tests of ebf passed!")
 # ### Testing Node Counting
 # This is used to find the count of nodes in an experiment. When the variable `countNodes` is set to True, the nodes created by the search is retuned in addition to the regular result. We test this against some given values.
 
-# In[25]:
+# In[27]:
 
 
 startState = [1,2,3,4,0,5,6,7,8]
@@ -567,7 +573,7 @@ print("Tests of counting funcitonality passed!")
 
 # Here is a simple example using our usual simple graph search.
 
-# In[26]:
+# In[28]:
 
 
 def actionsF_simple(state):
@@ -584,38 +590,38 @@ def h_simple(state, goal):
     return 1
 
 
-# In[27]:
+# In[29]:
 
 
 actions = actionsF_simple('a')
 actions
 
 
-# In[28]:
+# In[30]:
 
 
 takeActionF_simple('a', actions[0])
 
 
-# In[29]:
+# In[31]:
 
 
 goalTestF_simple('a', 'a')
 
 
-# In[30]:
+# In[32]:
 
 
 h_simple('a', 'z')
 
 
-# In[31]:
+# In[33]:
 
 
 iterativeDeepeningSearch('a', 'z', actionsF_simple, takeActionF_simple, 10)
 
 
-# In[32]:
+# In[34]:
 
 
 aStarSearch('a',actionsF_simple, takeActionF_simple,
@@ -625,12 +631,34 @@ aStarSearch('a',actionsF_simple, takeActionF_simple,
 
 # ### Experiment Trials
 
-# Here we will use the `runExperiment` function to test out the algorithms on different goal states. 
+# Here we will use the `runExperiment` function to test out the algorithms on different goal states. First we do the given experiment to verify the values. 
 
-# In[1]:
+# In[57]:
 
 
 g1 = [1,2,3,4,0,5,6,7,8]
+g2 = [1,2,3,4,5,8,6,0,7]
+g3 = [1,0,3,4,5,8,2,6,7]
+hlist = [h1_8p, h2_8p, h3_8p]
+runExperiment(g1,g2,g3,hlist)
+
+
+# Testing some more states and some unreachable states.
+
+# In[ ]:
+
+
+startState = [1,0,3,2,4,5,6,7,8]
+g1 = [1,2,3,4,0,5,6,7,8]
+# actionsF, takeActionF, goalTestF, hF, countNodes = False
+aStarSearch(startState, actionsF_8p, takeActionF_8p, lambda s: goalTestF_8p(s, g1),
+                                 lambda s: h3_8p(s, g1), True)
+
+
+# In[58]:
+
+
+g1 = [1,0,3,2,4,5,6,7,8]
 g2 = [1,2,3,4,5,8,6,0,7]
 g3 = [1,0,3,4,5,8,2,6,7]
 hlist = [h1_8p, h2_8p, h3_8p]
@@ -641,7 +669,7 @@ runExperiment(g1,g2,g3,hlist)
 
 # Download [A3grader.tar](http://www.cs.colostate.edu/~anderson/cs440/notebooks/A3grader.tar) and extract A3grader.py from it.
 
-# In[35]:
+# In[36]:
 
 
 get_ipython().run_line_magic('run', '-i A3grader.py')

@@ -47,16 +47,26 @@
 # 
 # Add markdown cells in which you describe the Q learning algorithm and your implementation of Q learning as applied to the Towers of Hanoi problem.  Use at least 15 sentences, in one or more markdown cells.
 
-# Printing methods! Struggdling for each int to be at the bottom. Can get them into rows successfully though. ??? I'm going to need some more calculations based on the length of the lists I guess....
-# 
+# ## Printing and Formatting
+# Code in this section provides a readable format of the towers of hanoi state and a tuple utility function.
 
-# In[1]:
+# The method `printState` prints out a representation of the state of the towers of hanoi puzzle. As and example, the state [[1,2,3],[],[]], which is the starting state, would return:
+# ```
+# 1 
+# 2
+# 3
+# ------
+# ```
+# To create this representation, a new copy of the state is made to leave the original intact. Then each list in the state is filled with space characters so they each have equal length. Finally, the i'th element of each list is printed in column format.
+
+# In[4]:
 
 
-import copy
+import copy as cp
 #Prints based on how many rows there are.
 def printState(state):
-    printState = copy.deepcopy(state)
+    #Deep copy ensures each inner list is also copied into a new list.
+    printState = cp.deepcopy(state)
     for s in printState:
         while len(s) < 3:
             s.insert(0, " ")
@@ -65,9 +75,9 @@ def printState(state):
     print("-----")
 
 
-# TUPLENATE? Looks like it works correctly, returns a tuple of tuples.
+# This method returns a tuple pair of the provided state and move. In the Q dicionary, the values are stored based on their `(state,move)` key. This helper function makes each list in state into a tuple, then makes the move list into a tuple and returns both of them as a pair. 
 
-# In[2]:
+# In[5]:
 
 
 def stateMoveTuple(state, move):
@@ -76,34 +86,29 @@ def stateMoveTuple(state, move):
     return(statetup, movetup)
 
 
-# In[3]:
+# ## Manipulating state of the puzzle
+# Code in this section provides methods of finding changing the puzzle in a way that is consistent with the constraints of the towers of hanoi. 
 
+# This function will return a new state given a state and move that reflects the given move on that state. `state` is the list representation of the puzzle discussed above. `move` is a list of length 2 where the first element is the peg to move from and the second element is the peg to move too. So `move = [1,2]` would indicate moving the disk on top of peg 1 to peg 2. 
+# 
+# First, `state` is copied into `newState` so that `state` is left intact. Then `disk`, representing the disk being moved from peg to peg, is poped of the first member of `move`. Finally, `disk` is inserted at the front of the destination list, placing it ontop of the peg stack. The only slight complication is that peg indexes must be adjusted from their move represenation. So a move from peg 1 to peg 2 must access `state[0]` and `state[1]`.
+# 
+# The method assumes that the given move is valid, so it could fail on incorrect input.
 
-stateMoveTuple([[1,2,3],[],[]], [1,2])
-
-
-# make a move. Looks like this works fine too, note how we need to subtract from move[1] in order to make the correct move (second post is index one). 
-
-# In[4]:
+# In[6]:
 
 
 import copy as cp
 def makeMove(state, move):
     newState = cp.deepcopy(state)
-    #um, this isn't at all how this should work...
-    #I seriously don't know How I even wrote this or why I would think this was correct
-    #for l in newState:
-    #    if move[0] in l:
-    #        l.remove(move[0])
-    #        newState[move[1] - 1].append(move[0])
     disk = newState[move[0] - 1].pop(0)
     newState[move[1] - 1].insert(0, disk)
     return newState
 
 
-# Finds the valid moves from a given state by, stuff
+# This method is a helper method to the following method `validMoves`. Given a `state`, index `i` and index `j`, it determines whether the state has a disk at that index. This is a common check in `validMoves`. 
 
-# In[5]:
+# In[7]:
 
 
 def nullCheck(state, i, j):
@@ -111,6 +116,15 @@ def nullCheck(state, i, j):
         return True
     else:
         return False
+
+
+# This method determines the valid moves from a given `state` following the rules of the towers of hanoi puzzle. The only restriction in the puzzle is that a disk cannot be moved onto a smaller disk. In our representation, this means that an int cannot be moved into another list in `state` where the following int in the destination list is greater. 
+# 
+# The method breaks the valid moves into three sections, one for each source peg. So the first line `if nullCheck(state, 0, 0):` determines all valid moves from the first peg given `state`. Then the inner if statements check for the status of the other two pegs. For example, the line `if not nullCheck(state, 1, 0) or state[0][0] < state[1][0]:` checks if the move from peg 1 to peg 2 is valid by checking to see if peg 2 is empty, in which case the move is valid by default, or the top disk on peg two is less than the source disk. After looking at each possible move in this manner, all valid moves are returned.
+
+# In[8]:
+
+
 def validMoves(state):
     retList = []
     #Pretty much just going to check each possible move. 
@@ -133,46 +147,12 @@ def validMoves(state):
     return retList
 
 
-# In[6]:
+# ## Training and Using Q
+# Code in this section builds and tests the Q dictionary. Q is a dictionary where the value for a `(state, move)` tuple is an estimation of the remaining moves to get to the goal. 
 
+# Here is the method `epsionGreedy` which takes an epsilon, Q dictionary and state. `epsilon` represents the probability that we take the random choice. First, the method gets a valid list of moves based on `state`. Then, if a random number between 1 and 0 is less than epsilon, a random choice from that list is returned. Otherwise, the move with the highest value in `Q` is returned, representing the greedy choice. In this case, we represent unseen moves with 0 using the `get` function so that further exploration is encouraged.
 
-state = [[1,2,3],[],[]]
-printState(state)
-moves = validMoves(state)
-print(moves)
-state = makeMove(state, moves[1])
-printState(state)
-moves = validMoves(state)
-print(moves)
-state = makeMove(state, moves[0])
-printState(state)
-moves = validMoves(state)
-print(moves)
-state = makeMove(state,moves[2])
-printState(state)
-moves = validMoves(state)
-print(moves)
-state = makeMove(state, moves[0])
-printState(state)
-moves  = validMoves(state)
-print(moves)
-state = makeMove(state, moves[0])
-printState(state)
-moves  = validMoves(state)
-print(moves)
-state = makeMove(state, moves[2])
-printState(state)
-moves  = validMoves(state)
-print(moves)
-state = makeMove(state, moves[1])
-printState(state)
-moves  = validMoves(state)
-print(moves)
-
-
-# Epsilon greedy function. Just a cleaner way of writing trainQ. Either chooses a random move, or based on Q
-
-# In[8]:
+# In[9]:
 
 
 import numpy as np
@@ -188,22 +168,30 @@ def epsilonGreedy(epsilon, Q, state):
         #Theoretically, we want to choose the lowest Q, so if we haven't seen it
         #assume that it isn't good: its value is inf. 
         #This is reflected in choosing argmin, not argmax. 
-        Qs = np.array([Q.get(tup, float('inf')) for tup in statesAndMovesTuples])
+        Qs = np.array([Q.get(tup, 0) for tup in statesAndMovesTuples])
         return moveList[np.argmin(Qs)]
 
 
-# In[12]:
-
-
-
-state = [[1,2,3],[],[]]
-print(validMoves(state))
-Q = {}
-#Q[stateMoveTuple(state, [1,3])] = 0
-#epsilonGreedy(0, Q, state)
-
-
-# This is the Q training algorithm from the tictactoe version.
+# This method trains the Q dictionary based. The parameters are:
+# - `nRepetitions`. Controls the outer loop. Effects run time and accuracy of Q dictionary. 
+# - `learningRate`. Changes how quickly values in `Q` learn.
+# - `validMovesF` A function that returns a list of valid moves. 
+# - `makeMoveF` A function that makes a move and returns a copy of the given state. 
+# - `showMoves = False` A default initialized variable that I added for the shareMoves functionality.
+# 
+# First, a few variables are initialized. `Q` is initialized to an empty dictionary, `numberSteps` is an empty list to store each trials number of steps to find the goal, and `epsilon` is set to 1. 
+# 
+# Then trials are ran for `nRepetitions`. `epsilon` is decayed by `epsilonDecayFactor` for each trial so that the randomness of the choices given by `epsilonGreedy` decreases over time. More variables are initialized at the beginning of the trial to keep track of steps, create the starting state and say when the trail is done. 
+# 
+# The inner loop then executes until the goal state `[[],[],[1,2,3]]` is found. At each iteration 
+# - `step` is incremented to represent the number of moves taken to find the goal
+# - `move` is set using `epsilonGreedy` to pick a valid move. 
+# - `newState` is made using `makeMoveF`. This represents the new step along this path that the algorithm is taking.
+# - `Tup` and `newTup` are made for easy reference. 
+# - If the current (state, move) tuple is not in `Q`, then we initialize that value to zero. Initially the remaining steps to the goal are unknow, and because they will be added to overtime 0 is a reasonable value for initialization.
+# - If the goal state has been reached, set `Q[state,move]` to one. This is we know that at this point only one step remains to the goal. `Q[newState, move]` is set to zero because no steps remain to get to the goal from here. 
+# - Otherwise if on the second iteration or more, the value for `Q[(oldState, moveOld)]` is updated using the temporal difference update. `oldState` and `moveOld` come from the last lines of the loop and represent the pair from the last iteration, which we can now say something about because of the new move. `learningRate` is multiplied by the reinforcement 1, representing the step cost, plus the difference between `Q[(state, move)]` and `Q[(oldState, moveOld)]`. This updates the Q value of `(stateOld, moveOld)` over time depending on `learningRate` so that it can learn over time and not to quickly while using the difference to inform the error. 
+# - Finally, `stateOld` and `moveOld` are set to `state` and `move` respectively. This is so the next iteration can look back on the old state of the puzzle to update what it found about the current move. `state` is updated in a similar way. 
 
 # In[10]:
 
@@ -260,7 +248,9 @@ def trainQ(nRepetitions, learningRate, epsilonDecayFactor, validMovesF, makeMove
             
 
 
-# In[21]:
+# `testQ` validates the Q dictionary by choosing the greedy choice for each move from the starting state and returning the path to the goal. For a maximum of `maxSteps` the function makes a move on `state` using `epsilonGreedy` where epsilon is 0, ensuring that it always takes the greedy choice. Once the goal is reached, the path to reach the goal is returned.
+
+# In[11]:
 
 
 def testQ(Q, maxSteps, validMovesF, makeMoveF):
@@ -275,73 +265,119 @@ def testQ(Q, maxSteps, validMovesF, makeMoveF):
         
 
 
-# # Examples
+# ## Testing Individual Funcitons
+# Code in this section tests the functions implemented above. 
 
-# In[13]:
+# This very long example demonstrates the fastest procession of towers of hanoi. It demonstrates the correct execution of `printState`, `validMoves` and `makeMove`. As well as testing each of these functions independently, it also shows they can travel from the start state to the end goal state. 
+
+# In[12]:
 
 
-state = [[1],[2],[3]]
+state = [[1,2,3],[],[]]
 printState(state)
-state = [[1,2], [], [3]]
+moves = validMoves(state)
+print(moves)
+state = makeMove(state, moves[1])
 printState(state)
-state = [[],[1],[2,3]]
+moves = validMoves(state)
+print(moves)
+state = makeMove(state, moves[0])
 printState(state)
-state = [[1, 2, 3], [], []]
+moves = validMoves(state)
+print(moves)
+state = makeMove(state,moves[2])
 printState(state)
+moves = validMoves(state)
+print(moves)
+state = makeMove(state, moves[0])
+printState(state)
+moves  = validMoves(state)
+print(moves)
+state = makeMove(state, moves[0])
+printState(state)
+moves  = validMoves(state)
+print(moves)
+state = makeMove(state, moves[2])
+printState(state)
+moves  = validMoves(state)
+print(moves)
+state = makeMove(state, moves[1])
+printState(state)
+moves  = validMoves(state)
+print(moves)
 
 
-# In[14]:
+# The output of this test demonstrates that each of the methods it uses works correctly. 
+
+# Here `stateMoveTuple` is demonstrated to return a tuple that is usable as a key to a dictionary. 
+
+# In[20]:
 
 
-move =[1, 2]
-
-stateMoveTuple(state, move)
-
-
-# In[15]:
-
-
-newstate = makeMove(state, move)
-newstate
+t1 = stateMoveTuple([[1,2,3],[],[]], [1,2])
+t2 = stateMoveTuple([[1],[2],[3]], [3,2])
+print(t1)
+print(t2)
+testDict = {}
+testDict[t1] = "Some Q value here"
+testDict[t2] = "and another here"
+testDict
 
 
-# In[16]:
+# ## Using Q
+# This section demonstrates the training and using the Q dictionary with different values. 
 
+# First, we call `trainQ` with the provided input as a start. 
 
-printState(newstate)
-
-
-# In[17]:
+# In[55]:
 
 
 Q, stepsToGoal = trainQ(50, 0.5, 0.7, validMoves, makeMove)
 
 
-# In[18]:
-
-
-Q
-
-
-# In[19]:
-
-
-stepsToGoal
-
+# The length of the Q dictionary determines how many values trainQ observed, or how much it trained. 
 
 # In[22]:
+
+
+len(Q)
+
+
+# Lets plot stepsToGoal to see how it reaches the optimal solution of 7. I've defined a helper function to easily graph `stepsToGoal` for different values
+
+# In[41]:
+
+
+import matplotlib.pyplot as plt
+get_ipython().run_line_magic('matplotlib', 'inline')
+def plotStep(stepsToGoal):
+    plt.plot(range(1, len(stepsToGoal) + 1), stepsToGoal)
+    plt.hlines(y = 7, xmin = 1, xmax = len(stepsToGoal), linestyle = "--", color = "red")
+
+
+# In[56]:
+
+
+plotStep(stepsToGoal)
+
+
+# Running this a couple times, it seems like it spikes up highly at first and trys as many many moves as it can, then quickly settles back down near 7. More values for epsilon and learning rate will be tried, but first the Q dictionary will be tested.
+
+# In[57]:
 
 
 path = testQ(Q, 20, validMoves, makeMove)
 
 
-# In[214]:
+# In[58]:
 
 
 path
 
 
-# In[23]:
+# Here we see the path returned by `testQ` is the optimal solution for towers of hanoi with three disks. The length of `path` is 8 because it includes the starting state, the solution only requires 7 moves. Lets print out the precesion here. 
+
+# In[61]:
 
 
 for s in path:
@@ -349,11 +385,48 @@ for s in path:
     print()
 
 
+# ## Experimenting with Q
+# This section tries out different values for `epsilonDecayRate`, `learningRate` and `nRepititions` to see how the affect the the outcome of Q. 
+
+# First we'll try out different epsilon decay rates. This uses a loop that tries each each value .1, .2 ... .9 for epsilon. 
+
+# In[77]:
+
+
+import numpy as np
+results = []
+for epsilonDecayRate in np.linspace(0.1, 0.9, 9 ):
+    results.append(trainQ(50, 0.5, epsilonDecayRate, validMoves, makeMove))
+fig = plt.figure(figsize = (12, 12))
+for i in range(1,10):
+    fig.add_subplot(3,3,i)
+    plotStep(results[i - 1][1])
+    plt.title("epsilon of ." + str(i))
+#plt.subplots_adjust(wspace = )
+
+
+# Now, the same thing but with learning rate!
+
+# In[78]:
+
+
+results = []
+for learningRate in np.linspace(0.1, 0.9, 9 ):
+    results.append(trainQ(50, learningRate, .7, validMoves, makeMove))
+fig = plt.figure(figsize = (12, 12))
+for i in range(1,10):
+    fig.add_subplot(3,3,i)
+    plotStep(results[i - 1][1])
+    plt.title("learningRate of ." + str(i))
+
+
+# Quick thoughts. Seems like epsilon rate doesn't really make a big difference. This is probably because of what was discussed in the piazza post about how `epsilonGreed` actually encourages taking the unseen move. So either way it tries out stuff it hasn't seen. Learning rate is cool to see though!
+
 # ## Grading
 
 # Download and extract `A4grader.py` from [A4grader.tar](http://www.cs.colostate.edu/~anderson/cs440/notebooks/A4grader.tar).
 
-# In[227]:
+# In[62]:
 
 
 get_ipython().run_line_magic('run', '-i A4grader.py')

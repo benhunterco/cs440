@@ -59,7 +59,7 @@
 # ```
 # To create this representation, a new copy of the state is made to leave the original intact. Then each list in the state is filled with space characters so they each have equal length. Finally, the i'th element of each list is printed in column format.
 
-# In[4]:
+# In[2]:
 
 
 import copy as cp
@@ -77,7 +77,7 @@ def printState(state):
 
 # This method returns a tuple pair of the provided state and move. In the Q dicionary, the values are stored based on their `(state,move)` key. This helper function makes each list in state into a tuple, then makes the move list into a tuple and returns both of them as a pair. 
 
-# In[5]:
+# In[3]:
 
 
 def stateMoveTuple(state, move):
@@ -95,7 +95,7 @@ def stateMoveTuple(state, move):
 # 
 # The method assumes that the given move is valid, so it could fail on incorrect input.
 
-# In[6]:
+# In[4]:
 
 
 import copy as cp
@@ -108,7 +108,7 @@ def makeMove(state, move):
 
 # This method is a helper method to the following method `validMoves`. Given a `state`, index `i` and index `j`, it determines whether the state has a disk at that index. This is a common check in `validMoves`. 
 
-# In[7]:
+# In[5]:
 
 
 def nullCheck(state, i, j):
@@ -122,7 +122,7 @@ def nullCheck(state, i, j):
 # 
 # The method breaks the valid moves into three sections, one for each source peg. So the first line `if nullCheck(state, 0, 0):` determines all valid moves from the first peg given `state`. Then the inner if statements check for the status of the other two pegs. For example, the line `if not nullCheck(state, 1, 0) or state[0][0] < state[1][0]:` checks if the move from peg 1 to peg 2 is valid by checking to see if peg 2 is empty, in which case the move is valid by default, or the top disk on peg two is less than the source disk. After looking at each possible move in this manner, all valid moves are returned.
 
-# In[8]:
+# In[6]:
 
 
 def validMoves(state):
@@ -152,7 +152,7 @@ def validMoves(state):
 
 # Here is the method `epsionGreedy` which takes an epsilon, Q dictionary and state. `epsilon` represents the probability that we take the random choice. First, the method gets a valid list of moves based on `state`. Then, if a random number between 1 and 0 is less than epsilon, a random choice from that list is returned. Otherwise, the move with the highest value in `Q` is returned, representing the greedy choice. In this case, we represent unseen moves with 0 using the `get` function so that further exploration is encouraged.
 
-# In[9]:
+# In[7]:
 
 
 import numpy as np
@@ -193,7 +193,7 @@ def epsilonGreedy(epsilon, Q, state):
 # - Otherwise if on the second iteration or more, the value for `Q[(oldState, moveOld)]` is updated using the temporal difference update. `oldState` and `moveOld` come from the last lines of the loop and represent the pair from the last iteration, which we can now say something about because of the new move. `learningRate` is multiplied by the reinforcement 1, representing the step cost, plus the difference between `Q[(state, move)]` and `Q[(oldState, moveOld)]`. This updates the Q value of `(stateOld, moveOld)` over time depending on `learningRate` so that it can learn over time and not to quickly while using the difference to inform the error. 
 # - Finally, `stateOld` and `moveOld` are set to `state` and `move` respectively. This is so the next iteration can look back on the old state of the puzzle to update what it found about the current move. `state` is updated in a similar way. 
 
-# In[10]:
+# In[8]:
 
 
 def trainQ(nRepetitions, learningRate, epsilonDecayFactor, validMovesF, makeMoveF, showMoves = False):
@@ -250,7 +250,7 @@ def trainQ(nRepetitions, learningRate, epsilonDecayFactor, validMovesF, makeMove
 
 # `testQ` validates the Q dictionary by choosing the greedy choice for each move from the starting state and returning the path to the goal. For a maximum of `maxSteps` the function makes a move on `state` using `epsilonGreedy` where epsilon is 0, ensuring that it always takes the greedy choice. Once the goal is reached, the path to reach the goal is returned.
 
-# In[11]:
+# In[9]:
 
 
 def testQ(Q, maxSteps, validMovesF, makeMoveF):
@@ -270,7 +270,7 @@ def testQ(Q, maxSteps, validMovesF, makeMoveF):
 
 # This very long example demonstrates the fastest procession of towers of hanoi. It demonstrates the correct execution of `printState`, `validMoves` and `makeMove`. As well as testing each of these functions independently, it also shows they can travel from the start state to the end goal state. 
 
-# In[12]:
+# In[10]:
 
 
 state = [[1,2,3],[],[]]
@@ -311,7 +311,7 @@ print(moves)
 
 # Here `stateMoveTuple` is demonstrated to return a tuple that is usable as a key to a dictionary. 
 
-# In[20]:
+# In[11]:
 
 
 t1 = stateMoveTuple([[1,2,3],[],[]], [1,2])
@@ -329,7 +329,7 @@ testDict
 
 # First, we call `trainQ` with the provided input as a start. 
 
-# In[55]:
+# In[12]:
 
 
 Q, stepsToGoal = trainQ(50, 0.5, 0.7, validMoves, makeMove)
@@ -337,7 +337,7 @@ Q, stepsToGoal = trainQ(50, 0.5, 0.7, validMoves, makeMove)
 
 # The length of the Q dictionary determines how many values trainQ observed, or how much it trained. 
 
-# In[22]:
+# In[13]:
 
 
 len(Q)
@@ -345,7 +345,7 @@ len(Q)
 
 # Lets plot stepsToGoal to see how it reaches the optimal solution of 7. I've defined a helper function to easily graph `stepsToGoal` for different values
 
-# In[41]:
+# In[14]:
 
 
 import matplotlib.pyplot as plt
@@ -355,7 +355,7 @@ def plotStep(stepsToGoal):
     plt.hlines(y = 7, xmin = 1, xmax = len(stepsToGoal), linestyle = "--", color = "red")
 
 
-# In[56]:
+# In[15]:
 
 
 plotStep(stepsToGoal)
@@ -363,13 +363,13 @@ plotStep(stepsToGoal)
 
 # Running this a couple times, it seems like it spikes up highly at first and trys as many many moves as it can, then quickly settles back down near 7. More values for epsilon and learning rate will be tried, but first the Q dictionary will be tested.
 
-# In[57]:
+# In[16]:
 
 
 path = testQ(Q, 20, validMoves, makeMove)
 
 
-# In[58]:
+# In[17]:
 
 
 path
@@ -377,7 +377,7 @@ path
 
 # Here we see the path returned by `testQ` is the optimal solution for towers of hanoi with three disks. The length of `path` is 8 because it includes the starting state, the solution only requires 7 moves. Lets print out the precesion here. 
 
-# In[61]:
+# In[18]:
 
 
 for s in path:
@@ -390,7 +390,7 @@ for s in path:
 
 # First we'll try out different epsilon decay rates. This uses a loop that tries each each value .1, .2 ... .9 for epsilon. 
 
-# In[77]:
+# In[19]:
 
 
 import numpy as np
@@ -407,7 +407,7 @@ for i in range(1,10):
 
 # Now, the same thing but with learning rate!
 
-# In[78]:
+# In[20]:
 
 
 results = []
@@ -420,13 +420,21 @@ for i in range(1,10):
     plt.title("learningRate of ." + str(i))
 
 
-# Quick thoughts. Seems like epsilon rate doesn't really make a big difference. This is probably because of what was discussed in the piazza post about how `epsilonGreed` actually encourages taking the unseen move. So either way it tries out stuff it hasn't seen. Learning rate is cool to see though!
+# For all the different values of `epsilonDecayRate`, the decline to the optimal path did not appear to be affected much. Most likely this is becuase of the implementation `epsilonGreedy`. Although a lower `epsilon` value will make `epsilonGreedy` more likely to chose the greedy choice, the way `epsilonGreedy` deals with unseen Qs leads `epsilonGreedy` to choose the unseen choice. The line
+# 
+# `Qs = np.array([Q.get(tup, 0) for tup in statesAndMovesTuples])`
+# 
+# Will add unseen Qs as 0, which will then be chosen as the minumum value. As a result, `epsilonGreedy` still favors unseen moves even when it is taking the greedy choice. 
+# 
+# The graphs of the different learning rates demonstrate the results of changing `learningRate`. The low values of .1 and .2 still have variation in the number of steps at the end of 50 trials. Then by a learning rate of .4 the algorithm finds the optimal value of 7. The speed at which it reaches the optimal path continues to improve and in my trail the value of .9 was the fastest learning, correctly finding the 7 step solution. 
+# 
+# These graphs on the x axis show the number of steps at each repitition. We can see clearly that if `nRepititions` was around or below 30 the algorithm probably would not come to learn the optimal solution very well. Based on the 
 
 # ## Grading
 
 # Download and extract `A4grader.py` from [A4grader.tar](http://www.cs.colostate.edu/~anderson/cs440/notebooks/A4grader.tar).
 
-# In[62]:
+# In[79]:
 
 
 get_ipython().run_line_magic('run', '-i A4grader.py')

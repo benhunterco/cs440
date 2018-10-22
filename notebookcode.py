@@ -428,13 +428,13 @@ for i in range(1,10):
 # 
 # The graphs of the different learning rates demonstrate the results of changing `learningRate`. The low values of .1 and .2 still have variation in the number of steps at the end of 50 trials. Then by a learning rate of .4 the algorithm finds the optimal value of 7. The speed at which it reaches the optimal path continues to improve and in my trail the value of .9 was the fastest learning, correctly finding the 7 step solution. 
 # 
-# These graphs on the x axis show the number of steps at each repitition. We can see clearly that if `nRepititions` was around or below 30 the algorithm probably would not come to learn the optimal solution very well. Based on the 
+# These graphs on the x axis show the number of steps at each repitition. We can see clearly that if `nRepititions` was around or below 30 the algorithm probably would not come to learn the optimal solution very well. Based on the two graphs above, high enough `nRepititions` will lead to the correct solution. I ran a few trials to see whether `nRepititions` would effect the number of entries in the Q dictionary. After only only 5 repititions, the Q  dictionary had reached 78 entries because of how much this implementation favors new moves. These values were not fully accurate, but had been seen. 
 
 # ## Grading
 
 # Download and extract `A4grader.py` from [A4grader.tar](http://www.cs.colostate.edu/~anderson/cs440/notebooks/A4grader.tar).
 
-# In[79]:
+# In[36]:
 
 
 get_ipython().run_line_magic('run', '-i A4grader.py')

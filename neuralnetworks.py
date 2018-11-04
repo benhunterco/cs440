@@ -1,4 +1,3 @@
-
 import numpy as np
 import scaledconjugategradient as scg
 import mlutils as ml  # for draw()

@@ -88,7 +88,7 @@ import mlutils as ml
 import time
 
 
-# In[32]:
+# In[75]:
 
 
 def trainNNs(X, Y, trainFraction, hiddenLayerStructures, numberRepetitions,
@@ -108,7 +108,10 @@ def trainNNs(X, Y, trainFraction, hiddenLayerStructures, numberRepetitions,
             #initiallizes ni->columns of X
             #             no->columns of Y
             #             nhs->our given structure in hidden layers
-            nnet = nn.NeuralNetwork(X.shape[1], structure, Y.shape[1])
+            if not classify:
+                nnet = nn.NeuralNetwork(X.shape[1], structure, Y.shape[1])
+            else:
+                nnet = nn.NeuralNetworkClassifier(X.shape[1],structure, len(np.unique(Y)))
             #Train for number of iterations.
             nnet.train(Xtrain, Ytrain, numberIterations)
             #collect the trained outputs with training data and test data
@@ -120,8 +123,12 @@ def trainNNs(X, Y, trainFraction, hiddenLayerStructures, numberRepetitions,
             # so for simple regression n -2 df, = number of columns in X with column of ones.
             #Difference between measuring the amount of error and trying to estimate
             #Epsilons in the model.
-            rmseTrained = np.sqrt(np.mean((Ytrain - predictedYTrained) ** 2))
-            rmseTested = np.sqrt(np.mean((Ytest - predictedYTested) ** 2))
+            if not classify:
+                rmseTrained = np.sqrt(np.mean((Ytrain - predictedYTrained) ** 2))
+                rmseTested = np.sqrt(np.mean((Ytest - predictedYTested) ** 2))
+            else:
+                rmseTrained = sum(Ytrain.ravel()==predictedYTrained.ravel())/ float(len(Ytrain)) * 100
+                rmseTested = sum(Ytest.ravel()==predictedYTested.ravel())/ float(len(Ytest)) * 100
             #could also save the residuals here and talk about trends...
             trainedList.append(rmseTrained)
             testedList.append(rmseTested)
@@ -360,52 +367,46 @@ Xenergy = data[:, 2:]
 # In[27]:
 
 
+type(Xenergy[1])
+
+
+# In[28]:
+
+
 Xenergy.shape, Tenergy.shape
 
 
 # If you were stuck on a desert island with a raspberry pi, this might be the fastest way to go. 
 
-# In[28]:
+# In[29]:
 
 
 mod = linearRegression(Xenergy, Tenergy)
 
 
-# In[29]:
+# In[30]:
 
 
 mod
-
-
-# In[142]:
-
-
-Xnames
-
-
-# In[16]:
-
-
-Tnames
 
 
 # Train several neural networks on all of this data for 100 iterations.  Plot the error trace (nnet.getErrorTrace()) to help you decide now many iterations might be needed.  100 may not be enough.  If for your larger networks the error is still decreasing after 100 iterations you should train all nets for more than 100 iterations.
 # 
 # Now use your `trainNNs`, `summarize`, and `bestNetwork` functions on this data to investigate various network sizes.
 
-# In[33]:
+# In[31]:
 
 
-results = trainNNs(Xenergy, Tenergy, 0.8, [0, 5, [5, 5], [10, 10]], 10, 100, residuals = True)
+results = trainNNs(Xenergy, Tenergy, 0.8, [0, 5, [5, 5], [10, 10]], 10, 100)
 
 
-# In[34]:
+# In[32]:
 
 
 summarize(results)
 
 
-# In[35]:
+# In[33]:
 
 
 bestNetwork(summarize(results))
@@ -421,52 +422,87 @@ bestNetwork(summarize(results))
 
 # Create new nn with .8 for training and .2 for testing. Best was 10,10
 
-# In[104]:
+# In[40]:
+
+
+results = trainNNs(Xenergy, Tenergy, 0.8, [[1,1,1,1,1,1], [5, 5, 5], [20, 20], [10, 10, 10, 10],[100]], 10, 100)
+
+
+# In[35]:
+
+
+restultsPlus = trainNNs(Xenergy, Tenergy, 0.8, [[100, 100, 100], [20,20,20,20,20], [1000]], 10, 100)
+
+
+# In[41]:
+
+
+summarize(results)
+
+
+# In[42]:
+
+
+summarize(restultsPlus)
+
+
+# In[44]:
 
 
 #Create and train the nn.
+#Do this with 1000, but maybe on your desktop.
 bestNN = nn.NeuralNetwork(Xenergy.shape[1], [10,10], Tenergy.shape[1])
 Xtrain,Ytrain,Xtest,Ytest=ml.partition(Xenergy, Tenergy, (.8, .2), False)
-bestNN.train(Xtrain, Ytrain, 100)
+bestNN.train(Xtrain, Ytrain, 350) #300 should be fine
 #Final error is not the same as RMSE
 
 
-# In[112]:
+# In[45]:
+
+
+plt.plot(bestNN.getErrorTrace())
+
+
+# In[46]:
 
 
 Ypredicted = bestNN.use(Xenergy)
-Yenergy.shape
 
 
-# In[113]:
+# In[47]:
 
 
-#plt.plot(Ypredicted[:,0] - Xtrain[:,0], "o")
-np.sqrt(np.mean((Ypredicted[:,0] - Tenergy[:,0]) ** 2))
-
-
-# In[88]:
-
-
-plt.plot(Tenergy[:,0], Ypredicted[:,0], "o")
+plt.plot(Tenergy[:,0], Ypredicted[:,0], ".")
 
 
 # Here is a plot of actual vs predicted. Really doesn't look great in terms of predictive power
 
-# In[89]:
+# In[48]:
 
 
-print(Tenergy[1000])
-print(Ypredicted[1000])
-print(Tenergy.shape)
-print(Ypredicted.shape)
+plt.plot(Tenergy[:,1], Ypredicted[:,1], ".")
 
 
-# In[94]:
+# In[49]:
 
 
-print(Ypredicted[:,1])
-print(Tenergy[:,1])
+np.unique(Tenergy[:,1])
+
+
+# Here it is for the other one, not appliance maybe?
+
+# Here are some plots of residuals!
+
+# In[50]:
+
+
+plt.plot(Tenergy[:,0] - Ypredicted[:,0], ".")
+
+
+# In[51]:
+
+
+plt.plot(Tenergy[:,1] - Ypredicted[:,1], ".")
 
 
 # ## Data for Classification Experiment
@@ -478,38 +514,83 @@ print(Tenergy[:,1])
 #      
 # Read the data in the file `Frogs_MFCCs.csv` into python.  This will be a little tricky. Each line of the file is a sample of audio features plus three columns that label the sample by family, genus, and species. We will try to predict the species.  The tricky part is that the species is given as text.  We need to convert this to a target class, as an integer. The `numpy` function `unique` will come in handy here.
 
-# In[21]:
+# In[52]:
+
+
+csv = pd.read_csv("Frogs_MFCCs.csv")
+csv = csv.drop(['RecordID', 'Family', 'Genus', 'MFCCs_ 1'], axis = 1) #also drops MFCCs_1, 
+                                                                    #which only has the value 1, no in his.
+
+
+# In[53]:
+
+
+csv.shape
+
+
+# In[54]:
+
+
+data = csv.values
+Tanuran = data[:, 21:]
+Xanuran = data[:, :21]
+Xanuran = Xanuran.astype(np.float64)
+#print(type(Xanuran[1,1]))
+#print(Xanuran.astype(np.float64))
+#print(type(Xenergy[1,1]))
+
+
+# In[55]:
 
 
 Xanuran.shape, Tanuran.shape
 
 
-# In[22]:
+# In[56]:
 
 
 Xanuran[:2,:]
 
 
-# In[23]:
+# In[57]:
 
 
+names = np.unique(Tanuran)
+names = list(names)
+for i in range(len(Tanuran)):
+    Tanuran[i] = names.index(Tanuran[i])
+#Tanuran = [names.index(n) for n in Tanuran]
+#Tanuran = [[x] for x in Tanuran]
+#Tanuran = np.array(Tanuran)
+
+
+# In[65]:
+
+
+Xanuran.shape[1]
+
+
+# In[62]:
+
+
+Tanuran = Tanuran.astype(np.int)
 Tanuran[:2]
 
 
-# In[24]:
+# In[63]:
 
 
 for i in range(10):
     print('{} samples in class {}'.format(np.sum(Tanuran==i), i))
 
 
-# In[25]:
+# In[76]:
 
 
 results = trainNNs(Xanuran, Tanuran, 0.8, [0, 5, [5, 5]], 5, 100, classify=True)
 
 
-# In[26]:
+# In[77]:
 
 
 summarize(results)
@@ -531,7 +612,7 @@ bestNetwork(summarize(results))
 # 
 # Download [A5grader.tar](http://www.cs.colostate.edu/~anderson/cs440/notebooks/A5grader.tar) and extract `A5grader.py` from it.
 
-# In[27]:
+# In[114]:
 
 
 get_ipython().run_line_magic('run', '-i "A5grader.py"')

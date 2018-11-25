@@ -92,7 +92,7 @@
 # ## Given Functions
 # 
 
-# In[4]:
+# In[2]:
 
 
 import random
@@ -115,7 +115,7 @@ def min_conflicts(vars, domains, constraints, neighbors, max_steps=1000):
     return (None,None)
 
 
-# In[5]:
+# In[3]:
 
 
 def min_conflicts_value(var, current, domains, constraints, neighbors):
@@ -125,7 +125,7 @@ def min_conflicts_value(var, current, domains, constraints, neighbors):
                              lambda val: nconflicts(var, val, current, constraints, neighbors)) 
 
 
-# In[6]:
+# In[4]:
 
 
 def conflicted_vars(current,vars,constraints,neighbors):
@@ -134,7 +134,7 @@ def conflicted_vars(current,vars,constraints,neighbors):
             if nconflicts(var, current[var], current, constraints, neighbors) > 0]
 
 
-# In[7]:
+# In[5]:
 
 
 def nconflicts(var, val, assignment, constraints, neighbors):
@@ -146,7 +146,7 @@ def nconflicts(var, val, assignment, constraints, neighbors):
     return len(list(filter(conflict, neighbors[var])))
 
 
-# In[8]:
+# In[6]:
 
 
 def argmin_random_tie(seq, fn):
@@ -166,7 +166,9 @@ def argmin_random_tie(seq, fn):
 
 # ## Implemented Functions
 
-# In[29]:
+# `build_tuples` is a helper function for `schedule`. It takes a list of times and a list of rooms and builds a list containing each combination of times and rooms. 
+
+# In[7]:
 
 
 def build_tuples(times, rooms):
@@ -177,7 +179,9 @@ def build_tuples(times, rooms):
     return retlist
 
 
-# In[51]:
+# First, `schedule` builds the list of domains. This is simply all the possible combinations of times and rooms that is built by `build_tuples`. Then it creates the domains dictionary by giving this list to each class as a key to a dictionary. The neighbors dictionary is then created where each class is a key that has every other class as a neighbor in its value list. Finally, `min_conflicts` is called which returns a non-conflicting solution if one is found.
+
+# In[8]:
 
 
 def schedule(classes, times, rooms, max_steps):
@@ -199,7 +203,9 @@ def schedule(classes, times, rooms, max_steps):
     return solution, steps
 
 
-# In[15]:
+# `constraints_ok` takes a two class value pairs and compares them to see if they have any scheduling conflicts. First it checks to see whether the classes occur at the same time. If they don't then there cannot be a conflict, so True is returned. Then it checks two conditions at once. One is valid for all classes, if they occur at the same time and the same room, then there is a conflict so the function returns false. In addition, it checks to see whether the third digit, which indicates the class level, is the same. If it is, then the the constraints are broken so False is returned. If both of these constraints are passed, the we return True.
+
+# In[9]:
 
 
 def constraints_ok(class_name_1, value_1, class_name_2, value_2):
@@ -222,7 +228,9 @@ def constraints_ok(class_name_1, value_1, class_name_2, value_2):
     return False
 
 
-# In[103]:
+# The `display` function takes the assignments result from `schedule` along with a list of room and times and displays them in a reasonable manner. It uses format strings to adapt to the number of rooms and times passed in and display them in a reasonable way. 
+
+# In[137]:
 
 
 def display(assignments, rooms, times):
@@ -235,32 +243,84 @@ def display(assignments, rooms, times):
         #print(classes)
 
 
+# ### Extra Credit Functions
+# 
+# This will prefer a solution that has later meeting times and schedules the entry level classes around one and two.
+# 
+
+# `schedule_advanced` works by calling schedule for `max_tries` and keeping track of whichever trial has the lowest number of the violated preferences (specific meeting times). 
+
+# In[117]:
+
+
+def schedule_advanced(classes, times, rooms, max_steps, max_tries):
+    # call schedule and get the returns
+    best_schedule, best_steps = schedule(classes, times, rooms, max_steps)
+    min_count = preference_count(best_schedule)
+    # min solution is set to that one.
+    # min bad things is set to bad_things(schedule)
+    # for number of steps
+    for _ in range(max_tries):
+        new_schedule, new_steps = schedule(classes, times, rooms, max_steps)
+        new_count = preference_count(new_schedule)
+        if new_count < min_count:
+            best_schedule = new_schedule
+            min_count = new_count
+            best_steps = new_steps
+    return best_schedule, best_steps
+    # if min bad things > badThings[step], replace
+
+
+# `preference_count` returns the number of special preferences violated by a given schedule. It goes through each class's meeting time and checks to see whether it occurs early or late or a lunch because people prefere not to have classes at these times. Then it has a special preference for scheduling the intro level classes during the middle of the day so it is easier for students to fit them in. After counting all of these, it returns the count. 
+
+# In[127]:
+
+
+def preference_count(schedule):
+    #returns a count of violated preference.
+    count = 0
+    # count each class that occurs at 9, 12 or 4.
+    for class_name in schedule:
+        _, time = schedule[class_name]
+
+        if time == " 9 am" or time == "12 pm" or time == " 4 pm":
+            count += 1
+        if class_name == "CS163" or class_name == "CS164":
+            if not (time == " 1 pm" or time == " 2 pm"):
+                count += 1
+    return count
+        
+    # do not count if CS163 and CS164 meeting at 1 pm or 2 pm, otherwise count for each non occurance.
+
+
 # ## Testing 
 
 # Testing `constraints_ok`
 
-# In[22]:
+# In[141]:
 
 
 assert(not constraints_ok("CS160", ("CLARK 101", '9 am'), "CS200", ("CLARK 101", '9 am')))
 assert(not constraints_ok("CS160", ("CLARK 101", '9 am'), "CS161", ("CSB130", '9 am')))
 assert(constraints_ok("CS160", ("CLARK 101", '9 am'), "CS161", ("CSB130", '8 am')))
 assert(constraints_ok("CS160", ("CLARK 101", '9 am'), "CS270", ("CSB130", '9 am')))
+print("constraints_ok passed all tests!")
 
 
 # Testing `build_tuples`
 
-# In[49]:
+# In[142]:
 
 
 domainList = build_tuples(times, rooms)
 domains = {key: domainList for key in classes}
 domains
+#each class should have all combos as its list
 
 
-# ## Examples
+# Testing `schedule` 
 
-# In[25]:
+# In[143]:
 
 
 classes = ['CS160', 'CS163', 'CS164',
@@ -281,7 +341,7 @@ times = [' 9 am',
 rooms = ['CSB 130', 'CSB 325', 'CSB 425']
 
 
-# In[110]:
+# In[144]:
 
 
 max_steps = 100
@@ -290,10 +350,90 @@ print('Took', steps, 'steps')
 print(assignments)
 
 
-# In[111]:
+# Testing `display`.
+
+# In[145]:
 
 
 display(assignments, rooms, times)
+
+
+# Using larger sets 
+
+# In[148]:
+
+
+classes_ex = ['CS100', 'CS160', 'CS163', 'CS164',
+           'CS220', 'CS270', 'CS253',
+           'CS320', 'CS314', 'CS356', 'CS370',
+           'CS410', 'CS414', 'CS420', 'CS430', 'CS440', 'CS445', 'CS453', 'CS464',
+           'CS510', 'CS514', 'CS535', 'CS540', 'CS545']
+
+times_ex = [' 8 am',
+         ' 9 am',
+         '10 am',
+         '11 am',
+         '12 pm',
+         ' 1 pm',
+         ' 2 pm',
+         ' 3 pm',
+         ' 4 pm']
+
+rooms_ex = ['CSB 130', 'CSB 325', 'CSB 425', 'CLARK 101']
+
+
+# In[150]:
+
+
+assignments, steps = schedule(classes_ex, times_ex, rooms_ex, max_steps)
+display(assignments, rooms, times)
+
+
+# Testing `schedule_advanced` and `preference_count` with a reduced class list to see whether it adjusts for preferences. 
+
+# In[138]:
+
+
+# shortened set to see what solutions it comes up with
+classes = ['CS160', 'CS163', 'CS164',
+           'CS220', 'CS270', 'CS253',
+           'CS320', 'CS314', 'CS356', 'CS370',
+           'CS410', 'CS414', 'CS420']
+times = [' 9 am',
+         '10 am',
+         '11 am',
+         '12 pm',
+         ' 1 pm',
+         ' 2 pm',
+         ' 3 pm',
+         ' 4 pm']
+rooms = ['CSB 130', 'CSB 325', 'CSB 425']
+
+
+# In[139]:
+
+
+best, steps = schedule_advanced(classes, times, rooms, 100, 5000)
+display(best, rooms, times)
+
+
+# In[140]:
+
+
+preference_count(best)
+
+
+# In[151]:
+
+
+best, steps = schedule_advanced(classes_ex, times_ex, rooms_ex, 100, 5000)
+display(best, rooms_ex, times_ex)
+
+
+# In[152]:
+
+
+preference_count(best)
 
 
 # ## Check-in

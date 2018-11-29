@@ -20,7 +20,7 @@ def epsilonGreedy(Qnet, state, epsilon):
 
 ## removed validmovesf and makemove f
 def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsilon, epsilonDecayFactor):
-    outcomes = np.zeros(nBatches*nRepsPerBatch) # holds number of steps to victory.
+    outcomes = np.zeros(nBatches*nRepsPerBatch) # holds number of steps to victory. Should hold the number of outcome, win loss or draw
     ##create a 68 to one mapping.
     ##Also, hiddenlayers can be any structure..
     Qnet = nn.NeuralNetwork(68, hiddenLayers, 1)
@@ -59,7 +59,7 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
                 # see if that move won and if so give reinforcement?
                 # At this point its blacks turn, should I let black play or no?
                 # stateNext = makeMoveF(state, move)  #! MUST change board.py to not change itself. Or copy into statenext an
-                r = 1
+                r = 0 # step reinforcement should be zero, like in tic tac toe.
                 # Choose move from nextState. This part isn't exactly correct I think.
 
 
@@ -67,13 +67,14 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
                     # goal found. Q is one for winners
                     Qnext = 1
                     done = True
-                    outcomes[repk] = step
+                    outcomes[repk] = "1"
                     if rep % 10 == 0 or rep == nRepsPerBatch - 1:
                         print('batch={:d} rep={:d} epsilon={:.3f} steps={:d}'.format(batch, repk, epsilon,
                                                                                      int(outcomes[repk])), end=', ')
                 elif False: # state.draw()???
-                    #add a q of zero
-                    pass
+                    #add a 0 for a draw
+                    outcomes[repk] = "0"
+                    done = True
                 else:
                     #blacks turn
                     # choose a random choice for black.
@@ -82,7 +83,8 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
                     stateNextBlack = copy.copy(stateNext)
                     stateNextBlack.makeMove(moveBlack)
                     if len(stateNextBlack.validMoves()) == 0: #BG, red lost
-                        Qnext = 0
+                        Qnext = -1 #<-  negative reinforcement for loss
+                        outcomes[repk] = "-1"
                         done = True
                     #not sure what else to do....
 
@@ -98,8 +100,8 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
 
             # retraining.
             samples = np.array(samples)
-            X = samples[:, :5]
-            T = samples[:, 5:6] + samples[:, 6:7]
+            X = samples[:, :68]
+            T = samples[:, 68:69] + samples[:, 69:70]
             Qnet.train(X, T, nIterations, verbose=False)
 
             # Experience Replay: Train on recent samples with updates to Qnext.

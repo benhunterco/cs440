@@ -7,7 +7,7 @@ import copy
 def epsilonGreedy(Qnet, state, epsilon):
     moves = state.validMoves()
     if np.random.uniform() < epsilon:
-        move = moves[random.sample(range(len(moves)), 1)[0]] #take the randome move
+        move = moves[np.random.choice(range(len(moves)))] #take the randome move
         Q = Qnet.use(state.stateMoveVectorForNN(move)) if Qnet.Xmeans is not None else 0 #checks to see if initialized
     else:
         qs = []
@@ -61,47 +61,56 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
                 # stateNext = makeMoveF(state, move)  #! MUST change board.py to not change itself. Or copy into statenext an
                 r = 0 # step reinforcement should be zero, like in tic tac toe.
                 # Choose move from nextState. This part isn't exactly correct I think.
-
-
-                if len(stateNext.validMoves()) == 0: #GG, red won
+                Qnext = None
+                gameOver, winner = stateNext.isOver()  # returns boolean, [None|COLOR] tuple
+                # Now check to see if the game is over. Red just played,
+                # so we shouldn't need to check if red is the winner.
+                if gameOver and winner == Color.RED:  # GG, red won
                     # goal found. Q is one for winners
                     Qnext = 1
                     done = True
-                    outcomes[repk] = "1"
+                    outcomes[repk] = 1
                     if rep % 10 == 0 or rep == nRepsPerBatch - 1:
                         print('batch={:d} rep={:d} epsilon={:.3f} steps={:d}'.format(batch, repk, epsilon,
                                                                                      int(outcomes[repk])), end=', ')
-                elif False: # state.draw()???
-                    #add a 0 for a draw
-                    outcomes[repk] = "0"
+                elif gameOver:  # state.draw()???
+                    # add a 0 for a draw
+                    Qnext = 0
+                    outcomes[repk] = 0
                     done = True
                 else:
-                    #blacks turn
+                    # blacks turn
                     # choose a random choice for black.
                     blackMoves = stateNext.validMoves()
-                    moveBlack = np.random.choice(blackMoves)
+                    moveBlack = blackMoves[np.random.choice(range(len(blackMoves)))]
                     stateNextBlack = copy.copy(stateNext)
                     stateNextBlack.makeMove(moveBlack)
-                    if len(stateNextBlack.validMoves()) == 0: #BG, red lost
-                        Qnext = -1 #<-  negative reinforcement for loss
-                        outcomes[repk] = "-1"
+                    gameOver, winner = stateNextBlack.isOver()
+                    if gameOver:  # BG, red lost
+                        Qnext = -1  # <-  negative reinforcement for loss
+                        outcomes[repk] = -1
                         done = True
-                    #not sure what else to do....
+                # not sure what else to do....
+                # At this point, were back at red's turn and can get the q from epsilon greedy if not found
+                if Qnext is None:
+                    moveNext, Qnext = epsilonGreedy(Qnet, stateNext, epsilon)
+                else:
+                    if len(stateNext.validMoves()) > 0:
+                        moveNext, _ = epsilonGreedy(Qnet, stateNext, epsilon)
+                    else:
+                        moveNext = ((0, 0), [(0, 0)])  #placeholder, really there isn't a next move in this case because we lost.
 
-
-
-
-                moveNext, Qnext = epsilonGreedy(Qnet, stateNext, epsilon)
                 samples.append([state.stateMoveVectorForNN(move), r, Qnext])
+                # Don't worry about what this does, not 100% necessary
                 samplesNextStateForReplay.append([stateNext.stateMoveVectorForNN(moveNext), *moveNext])
 
                 state = copy.deepcopy(stateNext)
                 move = copy.deepcopy(moveNext)
 
-            # retraining.
+            # Train on samples collected from batch.
             samples = np.array(samples)
-            X = samples[:, :68]
-            T = samples[:, 68:69] + samples[:, 69:70]
+            X = samples[:, 0]  # somethings wrong with the dimensionality. Instead of n by n np.array, its 1D list of rows. Fix tomorrow!
+            T = samples[:, 68:69] + samples[:, 69:70]  # adds reinforcement plus Q
             Qnet.train(X, T, nIterations, verbose=False)
 
             # Experience Replay: Train on recent samples with updates to Qnext.

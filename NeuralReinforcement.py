@@ -8,13 +8,21 @@ def epsilonGreedy(Qnet, state, epsilon):
     moves = state.validMoves()
     if np.random.uniform() < epsilon:
         move = moves[np.random.choice(range(len(moves)))] #take the randome move
-        Q = Qnet.use(state.stateMoveVectorForNN(move)) if Qnet.Xmeans is not None else 0 #checks to see if initialized
+        X = state.stateMoveVectorForNN(move)
+        # without this, we give it a list. Needs an np array.
+        X = np.array(X)
+        # expects a 2d array. We want one row of a that array, so reshape first.
+        X = X.reshape(1, 68)
+        Q = Qnet.use(X) if Qnet.Xmeans is not None else 0 #checks to see if initialized
     else:
         qs = []
         for m in moves:
-            qs.append(Qnet.use(state.stateMoveVectorForNN(m))) if Qnet.Xmeans is not None else 0
+            X = state.stateMoveVectorForNN(m)
+            X = np.array(X)
+            X = X.reshape(1, 68)
+            qs.append(Qnet.use(X)) if Qnet.Xmeans is not None else 0
         move = moves[np.argmax(qs)]
-        Q = np.min(qs)
+        Q = np.max(qs)
     return move, Q
 
 
@@ -26,7 +34,7 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
     Qnet = nn.NeuralNetwork(68, hiddenLayers, 1)
     Qnet._standardizeT = lambda x: x
     Qnet._unstandardizeT = lambda x: x
-
+    samples = []
     # not neededsamples = []  # collect all samples for this repetition, then update the Q network at end of repetition.
     repk = -1  # not sure what this does, investigate maybe? Could be some sort of rep counter
 
@@ -71,13 +79,16 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
                     done = True
                     outcomes[repk] = 1
                     if rep % 10 == 0 or rep == nRepsPerBatch - 1:
-                        print('batch={:d} rep={:d} epsilon={:.3f} steps={:d}'.format(batch, repk, epsilon,
+                        print('Red won: batch={:d} rep={:d} epsilon={:.3f} steps={:d}'.format(batch, repk, epsilon,
                                                                                      int(outcomes[repk])), end=', ')
                 elif gameOver:  # state.draw()???
                     # add a 0 for a draw
                     Qnext = 0
                     outcomes[repk] = 0
                     done = True
+                    if rep % 10 == 0 or rep == nRepsPerBatch - 1:
+                        print('batch={:d} rep={:d} epsilon={:.3f} steps={:d}'.format(batch, repk, epsilon,
+                                                                                     int(outcomes[repk])), end=', ')
                 else:
                     # blacks turn
                     # choose a random choice for black.
@@ -90,6 +101,9 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
                         Qnext = -1  # <-  negative reinforcement for loss
                         outcomes[repk] = -1
                         done = True
+                        if rep % 10 == 0 or rep == nRepsPerBatch - 1:
+                            print('Black won: batch={:d} rep={:d} epsilon={:.3f} steps={:d}'.format(batch, repk, epsilon,
+                                                                                     int(outcomes[repk])), end=', ')
                 # not sure what else to do....
                 # At this point, were back at red's turn and can get the q from epsilon greedy if not found
                 if Qnext is None:
@@ -100,32 +114,32 @@ def trainQnet(nBatches, nRepsPerBatch, hiddenLayers, nIterations, nReplays, epsi
                     else:
                         moveNext = ((0, 0), [(0, 0)])  #placeholder, really there isn't a next move in this case because we lost.
 
-                samples.append([state.stateMoveVectorForNN(move), r, Qnext])
+                samples.append([*state.stateMoveVectorForNN(move), r, Qnext])
                 # Don't worry about what this does, not 100% necessary
-                samplesNextStateForReplay.append([stateNext.stateMoveVectorForNN(moveNext), *moveNext])
+                samplesNextStateForReplay.append([*stateNext.stateMoveVectorForNN(moveNext), *moveNext])
 
                 state = copy.deepcopy(stateNext)
                 move = copy.deepcopy(moveNext)
 
             # Train on samples collected from batch.
-            samples = np.array(samples)
-            X = samples[:, 0]  # somethings wrong with the dimensionality. Instead of n by n np.array, its 1D list of rows. Fix tomorrow!
-            T = samples[:, 68:69] + samples[:, 69:70]  # adds reinforcement plus Q
+            npsamples = np.array(samples)
+            X = npsamples[:, :68]  # somethings wrong with the dimensionality. Instead of n by n np.array, its 1D list of rows. Fix tomorrow!
+            T = npsamples[:, 68:69] + npsamples[:, 69:70]  # adds reinforcement plus Q
             Qnet.train(X, T, nIterations, verbose=False)
 
             # Experience Replay: Train on recent samples with updates to Qnext.
             # Not 100% needed, could just use the top part.
-            samplesNextStateForReplay = np.array(samplesNextStateForReplay)
+            #samplesNextStateForReplay = np.array(samplesNextStateForReplay)
             for replay in range(nReplays):
                 # for sample, stateNext in zip(samples, samplesNextStateForReplay):
                 # moveNext, Qnext = epsilonGreedy(Qnet, stateNext, epsilon, validMovesF)
                 # sample[6] = Qnext
                 # print('before',samples[:5,6])
-                QnextNotZero = samples[:, 6] != 0
-                samples[QnextNotZero, 6:7] = Qnet.use(samplesNextStateForReplay[QnextNotZero, :])
+                QnextNotZero = npsamples[:, 6] != 0
+                npsamples[QnextNotZero, 6:7] = Qnet.use(samplesNextStateForReplay[QnextNotZero, :])
                 # print('after',samples[:5,6])
-                T = samples[:, 5:6] + samples[:, 6:7]
+                T = npsamples[:, 5:6] + npsamples[:, 6:7]
                 Qnet.train(X, T, nIterations, verbose=False)
 
-        print('DONE')
-        return Qnet, outcomes, samples
+    print('DONE')
+    return Qnet, outcomes, samples

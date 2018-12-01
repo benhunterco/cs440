@@ -1,7 +1,7 @@
 
 import numpy as np
 import scaledconjugategradient as scg
-import mlutils as ml  # for draw()
+#import mlutils as ml  # for draw()
 from copy import copy
 
 class NeuralNetwork:
@@ -151,5 +151,5 @@ class NeuralNetwork:
     def getWeightsHistory(self):
         return self.weightsHistory
         
-    def draw(self, inputNames = None, outputNames = None):
-        ml.draw(self.Vs, self.W, inputNames, outputNames)
+    #def draw(self, inputNames = None, outputNames = None):
+    #    ml.draw(self.Vs, self.W, inputNames, outputNames)

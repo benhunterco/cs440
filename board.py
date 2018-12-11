@@ -56,7 +56,7 @@ class Board:
         return vector
 
     def stateMoveTuple(self, move):
-        return self.draught, move
+        return str(self), move
 
     def setBoard(self, board):
         self.draught = board
@@ -131,18 +131,64 @@ class Board:
 
         return False, None
 
-    def getUtility(self):
+    def getUtility(self, type='nm', maximizePlayer=Color.RED):
         isOver, winner = self.isOver()
 
-        if isOver:
-            if winner == Color.RED:
+        if type == 'nm':
+            if isOver:
+                if winner == Color.RED:
+                    return 2 if self.turn is Color.RED else -2
+                if winner == Color.BLACK:
+                    return 2 if self.turn is Color.BLACK else -2
+                else:
+                    return 0
+        else: # type == 'mm'
+            if isOver:
+                if maximizePlayer == Color.RED:
+                    return 2 if winner == Color.RED else -2
+                else: # maximizePlayer == Color.BLACK
+                    return 2 if winner == Color.BLACK else -2
+
+        #
+        # Game is not over, count number of red and black pieces.
+        # When counting, kings count for 2 and regular pieces count
+        # for one. Whichever color has a higher value gets a utility
+        # of 1 or -1
+        #
+
+        redPieces = 0
+        blackPieces = 0
+
+        for i in range(8):
+            for j in range(8):
+                piece = self.draught[i][j]
+
+                if piece != None:
+                    if piece.color == Color.BLACK:
+                        if piece.king:
+                            blackPieces += 2
+                        else:
+                            blackPieces += 1
+                    else: # piece == Color.RED
+                        if piece.king:
+                            redPieces += 2
+                        else:
+                            redPieces += 1
+
+        if type == 'nm':
+            if redPieces > blackPieces:
                 return 1 if self.turn is Color.RED else -1
-            if winner == Color.BLACK:
+            elif blackPieces > redPieces:
                 return 1 if self.turn is Color.BLACK else -1
             else:
                 return 0
-
-        return None
+        else: # type == 'mm'
+            if redPieces > blackPieces:
+                return 1 if maximizePlayer == Color.RED else -1
+            elif blackPieces > redPieces:
+                return 1 if maximizePlayer == Color.BLACK else -1
+            else:
+                return 0
 
     # A helper function to check if a space can be moved to. If occupied, it checks if it can begin a jump sequence
     # It returns the valid move for moving in that direction, a list of tuples that represent positions along the way
@@ -156,8 +202,6 @@ class Board:
             if self.draught[new_row, new_col] is None:  # If the space is not occupied
                 if not recurse:  # If recursion, do not allow for a space to be unoccupied, it must be a jump
                     return [(new_row, new_col)]
-                else:
-                    return positions
             elif position not in positions:
                 # If a space can be jumped, search for another possible jump. The jumps MUST be made if a jump is started
                 if self.draught[new_row, new_col].color != self.turn and self.canBeJumped(position, (new_row, new_col)):
@@ -175,7 +219,7 @@ class Board:
                     search = [path for path in search if path is not None]
                     if len(search) > 0:  # Additional jumps exist, add the items to the list using .extend()
                         for move in search:
-                            if move is not None:
+                            if move is not None and position not in positions:
                                 positions.extend(move)
                         return positions
                     else:  # No more jumps are possible, so just return this one
